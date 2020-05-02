@@ -82,7 +82,7 @@
   (send *irtviewer* :draw-objects)  ;; Only for display
   (send *ri* :hand-angle-vector :rhand
         (send *hironxjsk* :hand-angle-vector :rhand) 1000)
-  (ros::duration-sleep 0.5)  ;; Don't wait completely to make grasp more stable.
+  (ros::duration-sleep 1.0);;0.5)  ;; Don't wait completely to make grasp more stable.
                              ;; Try (ros::duration-sleep 1.0) to check what happens
 
   ;; Make grasp stable (this procedure is required due to multi-fingered hand)
