@@ -46,6 +46,11 @@
 
 ;; Information of :boxes -> make coords
 (defun bbox->cube (bbox)
+  ;;to know box size
+  (setq size (ros::tf-point->pos (send bbox :dimensions)))
+  (setq *box-x* (elt size 0))
+  (setq *box-y* (elt size 1))
+  (setq *box-z* (elt size 2))
   (let* ((dims (ros::tf-point->pos (send bbox :dimensions)))
          (bx (make-cube (elt dims 0) (elt dims 1) (elt dims 2))))
     (send bx :newcoords
@@ -55,6 +60,7 @@
 
 ;;Get the information from box
 (defun get-box-coords ()
+  (setq find-box 0)
   (ros::duration-sleep 1.0)
   (setq *bbox-msg* (one-shot-subscribe *bounding-box-list*
 				jsk_recognition_msgs::BoundingBoxArray
@@ -63,6 +69,9 @@
   ;;Get the shape and coords of the box
   (setq *target-cube* (bbox->cube *target-bbox*))
   (objects *target-cube*) ;;For view
+  (format t "cube size ~A ~A ~A~%" *box-x* *box-y* *box-z*)
+  (if (and (< *box-x* 65) (< *box-z* 45))
+      (setq find-box 1))
   )
 
 ;;Choose target color
@@ -198,20 +207,20 @@
   (before-catch)
   (catch-box)
   (place-box #f(510 -40 50)))
-  ;;decide place coords
-  ;;(color-set 1)
-  ;;(get-box-coords)
-  ;;place
-  ;;(setq *target-coords* (v+ (send *target-cube* :worldpos) #f(0 -100 0)))
-  ;;(format t "target ~A~%" *target-coords*)
-  ;;(place-box *target-coords*))
-
+  
 
 ;;Pick&Place Red Box
 (defun catch-red ()
+  (setq find-box 0)
   (color-set 0)
   (look-table)
-  (get-box-coords)
+  ;;(ros::subscribe *bounding-box-list* jsk_recognition_msgs::BoundingBoxArray #'get-box-cb 1)
+  (while (= find-box 0)
+    (get-box-coords)
+    (format t "failed, try again!~%"))
+  (send *target-cube* :set-color :red)
+  (objects *target-cube*) ;;For view
+  (format t "find box")
   (before-catch-l)
   (catch-box-l)
   (place-box-l #f(550 0 130)))
@@ -222,3 +231,14 @@
   (catch-red))
   
 ;;memo #f(530 15 50)
+
+;;失敗したやつ
+;;If fail, try again
+;;(defun get-box-cb (msg)
+  ;;(setq *target-bbox* (elt (send msg :boxes) 0))
+  ;;Get the shape and coords of the box
+  ;;(setq *target-cube* (bbox->cube *target-bbox*))
+  ;;(if (and (*box-x* < 65) (< *box-z* 45))
+    ;;  (setq find-box 1))
+  ;;(objects *target-cube*) ;;For view
+  ;;)
