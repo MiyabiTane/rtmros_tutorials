@@ -1,7 +1,7 @@
 # 学んだことメモ<br>
 
 ## hironxjskがお弁当を詰めるデモ<br>
-＜コード＞https://gist.github.com/MiyabiTane/6d19dd7c44314a350444fd2f8b88fd75<br>
+### [EusLisp内で完結しているデモ](https://gist.github.com/MiyabiTane/6d19dd7c44314a350444fd2f8b88fd75)<br>
 ＜実行の仕方＞<br>
 ```
 $ roscore
@@ -11,6 +11,25 @@ $ source ~/ros/jsk_rtmros_ws/devel/setup.bash
 $ roscd hiro_lunch_box/src
 $ roseus demo.l
 $ (main)
+```
+### gazebo内におかずを出現させる<br>
+[このページ](https://github.com/MiyabiTane/jsk_model_tools/tree/add_by_tanemoto/eusurdf/new_models)を参考にしてeusモデルをgazebo内に出せるかたちに変換する。<br>
+次に、package.xmlの\<export>の部分に書き加える。<br>
+```
+<export>
+  <rosdoc config="rosdoc.yaml" />
+  <!-- use my models -->
+  <gazebo_ros gazebo_model_path="${prefix}/models" />
+</export>
+```
+.最後に、worldファイルに物体を書き加える。<br>
+```
+<include>
+    <name>takosan-wiener</name>
+    <uri>model://takosan-wiener</uri>
+    <!-- my models appear -->
+    <pose>0.0 0 0  0 0 0</pose>
+</include>
 ```
 
 ## hironxjskが積み木をするデモ<br>
@@ -111,19 +130,24 @@ gazeboを照らさないと色付き点群にならないことがあるのでga
 </scene>	
 ```
 
-## コマンドメモ
-<Emacs立ち上げ>
+## コマンドメモ<br>
+<Emacs立ち上げ><br>
 ・M-x shell -> euslisp使うとき<br>
 ・Ctrl+c b -> 新規作成<br>
-<ターミナルの終了>
+<ターミナルの終了><br>
 ・Ctrl+z -> 今すぐ強制終了せよ（危険）<br>
 ・Ctrl+c -> 適切に処理して終了<br>
-<便利なもの>
+<便利なもの><br>
 ・Ctrl+R -> これをしてから入力すると最近打った文字がでてくる<br>
 
 ## Gitメモ<br>
 https://github.com/start-jsk/rtmros_hrp2
-のページをForkしたあと、cd :~/ros/jsk_hiro_ws/src/rtm-ros-robotics/rtmros_tutorialsすれば自分のところにリポジトリを作ることができる。<br>
+のページをForkしたあと、
+```
+cd ~/ros/jsk_hiro_ws/src/rtm-ros-robotics/rtmros_tutorials
+git remote add MiyabiTane https://github.com/MiyabiTane/rtmros_tutorials
+```
+すれば自分のところにリポジトリを作ることができる。<br>
 あとはいつも通りgit add, git commit,して<br>
 ```
 git push MiyabiTane <ブランチ名>

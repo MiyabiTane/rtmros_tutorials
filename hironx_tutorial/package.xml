@@ -45,6 +45,8 @@
   <!-- End of HIRONXJSK demo dependency -->
 
   <export>
-  	<rosdoc config="rosdoc.yaml" />
+    <rosdoc config="rosdoc.yaml" />
+    <!-- use original models -->
+    <gazebo_ros gazebo_model_path="${prefix}/models" />
   </export>
   </package>
