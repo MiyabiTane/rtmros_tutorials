@@ -26,31 +26,36 @@
       <name>takosan-wiener</name>
       <uri>model://takosan-wiener</uri>
       <!-- my models appear -->
-      <pose>0.65 0.3 1.0  0 0 0</pose>
+      <pose>0.6 0.35 1.0  0 0 0</pose>
     </include>
     <include>
       <name>broccoli</name>
       <uri>model://broccoli</uri>
-      <!-- my models appear -->
-      <pose>0.65 0.2 1.0  0 0 0</pose>
+      <pose>0.6 0.25 1.0  0 0 0</pose>
     </include>
     <include>
       <name>tamagoyaki</name>
       <uri>model://tamagoyaki</uri>
-      <!-- my models appear -->
-      <pose>0.8 0.3 1.0  0 0 0</pose>
+      <pose>0.7 0.35 1.0  0 0 0</pose>
     </include>
     <include>
       <name>minitomato</name>
       <uri>model://minitomato</uri>
-      <!-- my models appear -->
-      <pose>0.8 0.2 1.0  0 0 0</pose>
+      <pose>0.7 0.25 1.0  0 0 0</pose>
     </include>
     <include>
       <name>lunchbox</name>
       <uri>model://lunchbox</uri>
-      <!-- my models appear -->
       <pose>0.65 0 1.0  0 0 0</pose>
     </include>
+    <include>
+      <name>fried-chicken</name>
+      <uri>model://fried-chicken</uri>
+      <pose>0.8 0.25 1.0  0 0 0</pose>
+    </include>
+    <!-- include>
+      <uri>model://flower-tea-cup-dish</uri>
+      <pose>0.7 0.3 1.0  0 0 0</pose>
+    </include -->
   </world>
 </sdf>
