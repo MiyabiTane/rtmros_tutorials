@@ -25,20 +25,31 @@
   (send *ri* :wait-interpolation))
 
 
-;;To Do
-;;同じ時間のlabel_namesとrectsを参照して指定した食べ物の座標をとってくる
-;;(defun get-msg (food-name)
-;;  (setq *food-name* null)
-;;  (while (not (food-name in *food-list*))
-
 (look-table)
 
-(defun get-msg ()
+(defun get-msg (*target-name*) ;;*target-name* -> example 'tv
   (ros::duration-sleep 1.0)
+;;To Do
+  ;;stampの差を調べて同じタイミングの情報をとってくる
+  (setq *food-name-msg* (one-shot-subscribe *coral-food-class*
+					    jsk_recognition_msgs::ClassificationResult
+					    :after-stamp (ros::time-now)))
   (setq *food-rects-msg* (one-shot-subscribe *coral-food-rects*
 					     jsk_recognition_msgs::RectArray
 					     :after-stamp (ros::time-now)))
-  (setq *food-rects* (elt (send *food-rects-msg* :rects) 0))
+  (if *food-rects-msg*
+      (progn
+	(setq *food-rects* nil)
+	(setq index 0)
+	(dolist (str (send *food-name-msg* :label_names))
+	  (format t "find  ~A~%" str)
+	  (if (string-equal str *target-name*)
+	      ;;(eql str 'tv)
+	      (progn
+		(format t "find-obj index is ~A~%" index)
+		(setq *food-rects* (elt (send *food-rects-msg* :rects) index))))
+	  (setq index (+ index 1)))
+	))
   )
   
 
@@ -70,13 +81,13 @@
 (ros::wait-for-service "pointcloud_screenpoint/screen_to_point")
 
 (defun main ()
-  (get-msg)
+  (get-msg "tv")
   (when *food-rects*
     (get-food-coords)
-    ;;(get-3d-coords *coral-food-x* *coral-food-y*)
+    (get-3d-coords *coral-food-x* *coral-food-y*)
     ;;[ERROR] [1589017913.486692063, 46.441000000]: attempted to call service  /pointcloud_screenpoint/screen_to_point, but failed 
     )
-  (exit)
+  ;;(exit)
   )
 
 (main)
