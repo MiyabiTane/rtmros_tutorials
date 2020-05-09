@@ -1,4 +1,6 @@
 <launch>
+  <arg name="cloud_machine" default="localhost"
+       doc="point cloud processor machine" />
 
   <arg name="gazebo" default="true" />
   <arg name="launch_rviz" default="true" />
@@ -10,10 +12,6 @@
       <arg name="world_file" value="$(find hironx_tutorial)/worlds/hiro_lunch_box.world" />
       <arg name="paused" value="$(arg paused)" />
     </include>
-    <!-- Spawn models into Gazebo -->
-    <!-- node name="spawn_takosan-wiener" pkg="gazebo_ros" type="spawn_model"
-          args="-file $(find hironx_tutorial)/models/takosan-wiener/model.sdf -sdf
-                -x 0.5 -y 0.0 -z 0.82 -model takosan-wiener" /-->
   </group>
 
   <!-- Launch recognition pipeline -->
@@ -26,11 +24,12 @@
     <arg name="publish_tf" value="true" />    
   </include>
 
-  <!-- add launch -->
-  <include file="$(find jsk_pcl_ros)/launch/hsi_color_filter.launch">
-    <arg name="INPUT" value="/head_camera/depth_registered/points"/>
-  </include>
-
+  <!-- 2d foor coords to 3d coords -->
+  <node pkg="jsk_pcl_ros" type="pointcloud_screenpoint"
+        name="pointcloud_screenpoint" >
+    <remap from="~points" to="/head_camera/depth_registered/points" />
+  </node>
+  
   <!-- Visualization -->
   <group if="$(arg launch_rviz)">
     <node name="rviz"
