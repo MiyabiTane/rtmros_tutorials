@@ -24,11 +24,10 @@
     <arg name="publish_tf" value="true" />    
   </include>
 
-  <!-- 2d foor coords to 3d coords -->
-  <node pkg="jsk_pcl_ros" type="pointcloud_screenpoint"
-        name="pointcloud_screenpoint" >
-    <remap from="~points" to="/head_camera/depth_registered/points" />
-  </node>
+  <!-- 2d food coords to 3d coords -->
+  <include file="$(find jsk_pcl_ros)/launch/pointcloud_screenpoint.launch">
+    <arg name="points" value="/head_camera/depth_registered/points"/>
+  </include>
   
   <!-- Visualization -->
   <group if="$(arg launch_rviz)">

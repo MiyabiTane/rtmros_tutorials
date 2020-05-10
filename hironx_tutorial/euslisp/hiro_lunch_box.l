@@ -6,9 +6,6 @@
 
 ;;Rostopic
 (ros::load-ros-package "jsk_recognition_msgs")
-(ros::load-ros-package "jsk_pcl_ros")
-(ros::load-ros-package "roseus")
-
 
 (defvar *coral-food-class* "edgetpu_object_detector/output/class")
 (defvar *coral-food-rects* "edgetpu_object_detector/output/rects")
@@ -25,26 +22,24 @@
   (send *ri* :wait-interpolation))
 
 
-(look-table)
+(defun coral-cb1 (msg)
+  (setq *food-name-msg* msg))
 
-(defun get-msg (*target-name*) ;;*target-name* -> example 'tv
-  (ros::duration-sleep 1.0)
-;;To Do
-  ;;stampの差を調べて同じタイミングの情報をとってくる
-  (setq *food-name-msg* (one-shot-subscribe *coral-food-class*
-					    jsk_recognition_msgs::ClassificationResult
-					    :after-stamp (ros::time-now)))
-  (setq *food-rects-msg* (one-shot-subscribe *coral-food-rects*
-					     jsk_recognition_msgs::RectArray
-					     :after-stamp (ros::time-now)))
+(defun coral-cb2 (msg)
+  (setq *food-rects-msg* msg))
+  
+  
+
+(defun get-msg (*target-name*) ;;*target-name* -> example "tv"
   (if *food-rects-msg*
       (progn
+	;;(foramt t "time 1 ~A~%" (send (send *food-name-msg* :header) :stamp))
+	;;(format t "time 2 ~A~%" (send (send *food-rects-msg* :header) :stamp))
 	(setq *food-rects* nil)
 	(setq index 0)
 	(dolist (str (send *food-name-msg* :label_names))
 	  (format t "find  ~A~%" str)
 	  (if (string-equal str *target-name*)
-	      ;;(eql str 'tv)
 	      (progn
 		(format t "find-obj index is ~A~%" index)
 		(setq *food-rects* (elt (send *food-rects-msg* :rects) index))))
@@ -53,7 +48,7 @@
   )
   
 
-;;あくまでCoralの座標
+;;Coralの座標
 (defun get-food-coords ()
   (setq x (send *food-rects* :x))
   (setq y (send *food-rects* :y))
@@ -63,33 +58,46 @@
   (setq *coral-food-y* (+ y (/ height 2)))
   (format t "coral-coords ~A ~A ~%" *coral-food-x* *coral-food-y*)
   )
-  
+
+
 ;;3次元上の座標獲得
 (defun get-3d-coords (*coral-food-x* *coral-food-y*)
   (setq req (instance jsk_recognition_msgs::TransformScreenpointRequest :init))
   (send req :x *coral-food-x*)
   (send req :y *coral-food-y*)
-  (setq res (ros::service-call "pointcloud_screenpoint/screen_to_point" req))
-  (setq *food-x* (send (send res :point) :x))
-  (setq *food-y* (send (send res :point) :y))
-  (setq *food-z* (send (send res :point) :z))
+  (format t ";; wait for *ray_srv*~%~%")
+  (ros::wait-for-service *ray_srv*) 
+  (setq res (ros::service-call *ray_srv* req))
+  (setq *food-x* (send (send res :vector) :x))
+  (setq *food-y* (send (send res :vector) :y))
+  (setq *food-z* (send (send res :vector) :z))
   (format t "food coords is ~A ~A ~A ~%" *food-x* *food-y* *food-z*)
   )
 
-(ros::roseus "get-3d-coords")
-(format t ";; wait for pointcloud_screenpoint/screen_to_point~%~%")
-(ros::wait-for-service "pointcloud_screenpoint/screen_to_point")
 
 (defun main ()
-  (get-msg "tv")
-  (when *food-rects*
-    (get-food-coords)
-    (get-3d-coords *coral-food-x* *coral-food-y*)
-    ;;[ERROR] [1589017913.486692063, 46.441000000]: attempted to call service  /pointcloud_screenpoint/screen_to_point, but failed 
-    )
-  ;;(exit)
+  (setq *food-rects* nil)
+  (while (eql *food-rects* nil)
+    (when *coral-food-class*
+      (get-msg "tv")))
+  (get-food-coords)
+  (get-3d-coords *coral-food-x* *coral-food-y*)
+  ;;[ERROR] [1589097303.138212744, 146.253000000]: attempted to call service  /pointcloud_screenpoint_nodelet/screen_to_point, but failed 
+
+  (ros::exit)
   )
 
-(main)
-(ros::spin)
-  
+(setq *food-rects-msg* nil)
+
+(look-table)
+(ros::roseus "get-3d-coords")
+(setq *ray_srv* "/pointcloud_screenpoint_nodelet/screen_to_point")
+;;To Do 同じ時刻のを取ってくる
+(ros::subscribe *coral-food-class* jsk_recognition_msgs::ClassificationResult #'coral-cb1)
+(ros::subscribe *coral-food-rects* jsk_recognition_msgs::RectArray #'coral-cb2)
+(while (ros::ok)
+  (ros::spin-once)
+  (ros::sleep)
+  (if *food-rects-msg*
+      (main)))
+
