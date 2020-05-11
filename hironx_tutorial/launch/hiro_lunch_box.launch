@@ -38,7 +38,7 @@
     <arg name="camera_info" value="/head_camera/rgb/camera_info"/>
     </include -->
   <node name="pointcloud_screenpoint_nodelet" pkg="nodelet" type="nodelet"
-        args="load jsk_pcl/PointcloudScreenpoint screenpoint_manager"
+        args="standalone jsk_pcl/PointcloudScreenpoint"
         output="screen" clear_params="true" respawn="true"
         machine="$(arg cloud_machine)">
     <remap from="~points" to="$(arg inpoints)" />
@@ -46,12 +46,10 @@
     <remap from="~rect" to="$(arg image)/$(arg image_type)/screenrectangle" />
     <remap from="~point_array" to="$(arg image)/$(arg image_type)/screenpoint_array" />
     <rosparam>
+      always_subscribe: true
       queue_size: 10
       crop_size: 10
       search_size: 16
-      use_rect: false
-      use_point_array: true
-      use_point: true
       publish_point: true
     </rosparam>
     <param name="use_sync" value="$(arg USE_SYNC)" />
