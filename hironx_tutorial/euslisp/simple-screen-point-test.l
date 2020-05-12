@@ -4,9 +4,13 @@
 (ros::load-ros-package "geometry_msgs")
 (setq *pub-topic* "/head_camera/rgb/image_rect_color/screenpoint")
 (setq *sub-topic* "/pointcloud_screenpoint_nodelet/output_point")
+(setq *camera-frame* "head_camera_rgb_optical_frame")
 
 (load "package://hrpsys_ros_bridge_tutorials/euslisp/hironxjsk-interface.l")
 (hironxjsk-init)
+
+(unless (boundp '*tfl*)
+  (setq *tfl* (instance ros::transform-listener :init)))
 
 (defun look-table ()
   (send *hironxjsk* :reset-manip-pose)
@@ -17,10 +21,11 @@
   (send *ri* :wait-interpolation))
 
 (defun cb (msg)
-  (format t "food coords is ~A ~A ~A ~%"
-          (send (send msg :point) :x)
-          (send (send msg :point) :y)
-          (send (send msg :point) :z)))
+  (let ((waist-to-camera (send *tfl* :lookup-transform "odom" *camera-frame* (ros::time 0)))
+        ;; use ros::tf-point->coords
+        (coords (make-coords :pos (ros::tf-point->pos (send msg :point)))))
+    (send coords :transform waist-to-camera :world)
+    (format t "food coords is ~A~%" (send coords :pos))))
 
 
 (ros::advertise *pub-topic* geometry_msgs::PointStamped 1)
@@ -36,7 +41,7 @@
   ;; publish
   (format t "x y ~A ~A~%" x y)
   (send pub-msg :header :stamp (ros::time-now))
-  (send pub-msg :header :frame_id "head_camera_rgb_optical_frame")
+  (send pub-msg :header :frame_id *camera-frame*)
   (send (send pub-msg :point) :x x)
   (send (send pub-msg :point) :y y)
   (send (send pub-msg :point) :z 0)
