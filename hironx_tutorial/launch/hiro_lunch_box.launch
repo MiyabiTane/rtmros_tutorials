@@ -32,11 +32,6 @@
   </include>
 
   <!-- 2d food coords to 3d coords -->
-  <!-- include file="$(find jsk_pcl_ros)/launch/pointcloud_screenpoint.launch">
-    <arg name="points" value="/head_camera/depth_registered/points"/>
-    <arg name="image" value="/head_camera/rgb/image_raw"/>
-    <arg name="camera_info" value="/head_camera/rgb/camera_info"/>
-    </include -->
   <node name="pointcloud_screenpoint_nodelet" pkg="nodelet" type="nodelet"
         args="standalone jsk_pcl/PointcloudScreenpoint"
         output="screen" clear_params="true" respawn="true"

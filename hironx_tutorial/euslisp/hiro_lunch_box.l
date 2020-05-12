@@ -61,18 +61,24 @@
 
 
 ;;3次元上の座標獲得
-(defun get-3d-coords (*coral-food-x* *coral-food-y*)
-  (setq req (instance jsk_recognition_msgs::TransformScreenpointRequest :init))
-  (send req :x *coral-food-x*)
-  (send req :y *coral-food-y*)
-  (format t ";; wait for *ray_srv*~%~%")
-  (ros::wait-for-service *ray_srv*) 
-  (setq res (ros::service-call *ray_srv* req))
-  (setq *food-x* (send (send res :vector) :x))
-  (setq *food-y* (send (send res :vector) :y))
-  (setq *food-z* (send (send res :vector) :z))
-  (format t "food coords is ~A ~A ~A ~%" *food-x* *food-y* *food-z*)
-  )
+(defun get-3d-coords ()
+  (let* ((x *coral-food-x*)
+	 (y *coral-food-y*)
+	 (req (instance jsk_recognition_msgs::TransformScreenpointRequest :init
+			:x x :y y))
+	 res)
+    
+    ;;(setq req (instance jsk_recognition_msgs::TransformScreenpointRequest :init))
+    ;;(send req :x *coral-food-x*)
+    ;;(send req :y *coral-food-y*)
+    (format t ";; wait for *ray_srv*~%~%")
+    (ros::wait-for-service *ray_srv*) 
+    (setq res (ros::service-call *ray_srv* req))
+    (setq *food-x* (send (send res :vector) :x))
+    (setq *food-y* (send (send res :vector) :y))
+    (setq *food-z* (send (send res :vector) :z))
+    (format t "food coords is ~A ~A ~A ~%" *food-x* *food-y* *food-z*)
+    ))
 
 
 (defun main ()
@@ -81,7 +87,7 @@
     (when *coral-food-class*
       (get-msg "tv")))
   (get-food-coords)
-  (get-3d-coords *coral-food-x* *coral-food-y*)
+  (get-3d-coords)
   ;;[ERROR] [1589097303.138212744, 146.253000000]: attempted to call service  /pointcloud_screenpoint_nodelet/screen_to_point, but failed 
 
   (ros::exit)
