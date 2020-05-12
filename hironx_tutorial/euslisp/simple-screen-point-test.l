@@ -1,6 +1,6 @@
 #!/usr/bin/env roseus
 
-(ros::roseus "simple-screen-point-test")
+(ros::roseus "simple-screen-point-test")             
 (ros::load-ros-package "geometry_msgs")
 (setq *pub-topic* "/head_camera/rgb/image_rect_color/screenpoint")
 (setq *sub-topic* "/pointcloud_screenpoint_nodelet/output_point")
