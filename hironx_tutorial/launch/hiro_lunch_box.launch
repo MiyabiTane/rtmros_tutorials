@@ -43,17 +43,12 @@
         machine="$(arg cloud_machine)">
     <remap from="~points" to="$(arg inpoints)" />
     <remap from="~point" to="$(arg image)/$(arg image_type)/screenpoint" />
-    <remap from="~rect" to="$(arg image)/$(arg image_type)/screenrectangle" />
-    <remap from="~point_array" to="$(arg image)/$(arg image_type)/screenpoint_array" />
     <rosparam>
-      always_subscribe: true
       queue_size: 10
       crop_size: 10
       search_size: 16
-      publish_point: true
     </rosparam>
     <param name="use_sync" value="$(arg USE_SYNC)" />
-    <param name="publish_points" value="$(arg PUBLISH_POINTS)" />
   </node>
   
   

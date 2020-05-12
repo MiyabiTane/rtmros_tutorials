@@ -1,8 +1,9 @@
 #!/usr/bin/env roseus
 
-(ros::roseus "simple-screen-point-test")
-(ros::load-ros-package "jsk_recognition_msgs")
-(setq *ray_srv* "/pointcloud_screenpoint_nodelet/screen_to_point")
+(ros::roseus "simple-screen-point-test")             
+(ros::load-ros-package "geometry_msgs")
+(setq *pub-topic* "/head_camera/rgb/image_rect_color/screenpoint")
+(setq *sub-topic* "/pointcloud_screenpoint_nodelet/output_point")
 
 (load "package://hrpsys_ros_bridge_tutorials/euslisp/hironxjsk-interface.l")
 (hironxjsk-init)
@@ -15,21 +16,34 @@
   (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 1000)
   (send *ri* :wait-interpolation))
 
+(defun cb (msg)
+  (format t "food coords is ~A ~A ~A ~%"
+          (send (send msg :point) :x)
+          (send (send msg :point) :y)
+          (send (send msg :point) :z)))
+
+
+(ros::advertise *pub-topic* geometry_msgs::PointStamped 1)
+(ros::subscribe *sub-topic* geometry_msgs::PointStamped #'cb)
+
+;; main
+
 (look-table)
 
 (let* ((x 240)
 	   (y 320)
-	   (req (instance jsk_recognition_msgs::TransformScreenpointRequest :init
-                      :x x :y y))
-	   res)
+	   (pub-msg (instance geometry_msgs::Pointstamped :init)))
+  ;; publish
   (format t "x y ~A ~A~%" x y)
-  (format t ";;wait for service~%")
-  (ros::wait-for-service *ray_srv*)
-  (setq res (ros::service-call *ray_srv* req))
-  (format t "food coords is ~A ~A ~A ~%"
-          (send (send res :vector) :x)
-          (send (send res :vector) :y)
-          (send (send res :vector) :z))
+  (send pub-msg :header :stamp (ros::time-now))
+  (send pub-msg :header :frame_id "head_camera_rgb_optical_frame")
+  (send (send pub-msg :point) :x x)
+  (send (send pub-msg :point) :y y)
+  (send (send pub-msg :point) :z 0)
+  (ros::publish *pub-topic* pub-msg)
+  ;; subscribe
+  (unix:usleep (* 100 1000))
+  (ros::spin-once)
   )
 
 (ros::exit)
