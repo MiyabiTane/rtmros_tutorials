@@ -11,7 +11,11 @@
   <arg name="image_type" default="image_rect_color"/>
   <arg name="USE_SYNC" default="false"/>
   <arg name="PUBLISH_POINTS" default="false"/>
-  
+  <arg name="manager" default="hiro_lunch_box_nodelet_manager"/>
+
+  <node name="$(arg manager)" pkg="nodelet" type="nodelet" args="manager"
+        machine="$(arg cloud_machine)" output="screen" />
+
   <group if="$(arg gazebo)">
     <arg name="paused" default="false" />
     <!-- Launch Gazebo -->
@@ -25,6 +29,8 @@
   <include file="$(find jsk_pcl_ros)/sample/tabletop_object_detector.launch">
     <arg name="input" value="/head_camera/depth_registered/points" />
     <arg name="sensor_frame" value="head_camera_rgb_optical_frame" />
+    <arg name="manager" value="$(arg manager)" />
+    <arg name="launch_manager" value="false" />
     <arg name="launch_openni" value="false" />
     <arg name="launch_tracking" value="false" />
     <arg name="launch_rviz" value="false" />
@@ -33,7 +39,7 @@
 
   <!-- 2d food coords to 3d coords -->
   <node name="pointcloud_screenpoint_nodelet" pkg="nodelet" type="nodelet"
-        args="standalone jsk_pcl/PointcloudScreenpoint"
+        args="load jsk_pcl/PointcloudScreenpoint $(arg manager)"
         output="screen" clear_params="true" respawn="true"
         machine="$(arg cloud_machine)">
     <remap from="~points" to="$(arg inpoints)" />
