@@ -9,8 +9,14 @@
 (ros::load-ros-package "geometry_msgs")
 (setq *pub-topic* "/head_camera/rgb/image_rect_color/screenpoint")
 (setq *sub-topic* "/pointcloud_screenpoint_nodelet/output_point")
+(setq *camera-frame* "head_camera_rgb_optical_frame")
+
 
 (defvar *coral-food-rects* "edgetpu_object_detector/output/rects")
+
+;;use tf
+(unless (boundp '*tfl*)
+  (setq *tfl* (instance ros::transform-listener :init)))
 
 
 ;; Look at table
@@ -24,6 +30,15 @@
   (send *ri* :wait-interpolation))
 
 
+;;Only for draw
+(defun draw (coords)
+  (setq *target-food* (make-cube 80 80 80))
+  (send *target-food* :locate coords)
+  (send *target-food* :set-color :salmon)
+  (objects *target-food*)
+  )
+
+
 ;;Subscribe Coral and Publish
 (defun coral_cb (msg)
   (format t "coral_cb~%")
@@ -31,9 +46,11 @@
     (setq *food-rects* (elt (send msg :rects) 0))
     (setq x (send *food-rects* :x))
     (setq y (send *food-rects* :y))
+    (setq width (send *food-rects* :width))
+    (setq height (send *food-rects* :height))
     ;;publish
-    (let* ((x (send *food-rects* :x))
-	   (y (send *food-rects* :y))
+    (let* ((x (+ x (/ width 2)))
+	   (y (+ y (/ height 2)))
 	   (pub-msg (instance geometry_msgs::Pointstamped :init)))
       (format t "x y ~A ~A ~%" x y)
       (send (send pub-msg :point) :x x)
@@ -47,11 +64,15 @@
 ;;CallBack
 (defun screen_point_cb (msg)
   (format t "screen_point_cb~%")
-  (setq *food-x* (send (send msg :point) :x))
-  (setq *food-y* (send (send msg :point) :y))
-  (setq *food-z* (send (send msg :point) :z))
-  (format t "food coords is ~A ~A ~A ~%" *food-x* *food-y* *food-z*)
-  (ros::exit)
+  ;;ros::tf-point->coords *camera-frame*座標を"WAIST"座標に変換
+  (let ((waist-to-camera (send *tfl* :lookup-transform "WAIST" *camera-frame* (ros::time 0)))
+	(coords (make-coords :pos (ros::tf-point->pos (send msg :point)))))
+    (send coords :transform waist-to-camera :world)
+    (format t "food coords ~A~%" (send coords :pos))
+    (draw (send coords :pos)))
+  ;;(ros::exit)
+  (ros::unsubscribe *coral-food-rects*)
+  (ros::unsubscribe *sub-topic*)
   )
 
 
