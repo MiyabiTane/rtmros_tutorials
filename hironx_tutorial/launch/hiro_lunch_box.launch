@@ -1,9 +1,14 @@
 <launch>
   <arg name="cloud_machine" default="localhost"
        doc="point cloud processor machine" />
-
+  
   <arg name="gazebo" default="true" />
   <arg name="launch_rviz" default="true" />
+
+  <!-- Spawn models into Gazebo -->
+  <node name="spawn_demo_cube" pkg="gazebo_ros" type="spawn_model"
+        args="-file $(find hironx_tutorial)/models/demo_cube/model.sdf -sdf
+              -x 0.50 -y 0.00 -z 0.82 -model demo_cube" />
 
   <!-- add for screenpoint -->
   <arg name="inpoints" default="/head_camera/depth_registered/points"/>
@@ -12,10 +17,10 @@
   <arg name="USE_SYNC" default="false"/>
   <arg name="PUBLISH_POINTS" default="false"/>
   <arg name="manager" default="hiro_lunch_box_nodelet_manager"/>
-
+  
   <node name="$(arg manager)" pkg="nodelet" type="nodelet" args="manager"
         machine="$(arg cloud_machine)" output="screen" />
-
+  
   <group if="$(arg gazebo)">
     <arg name="paused" default="false" />
     <!-- Launch Gazebo -->
@@ -24,7 +29,7 @@
       <arg name="paused" value="$(arg paused)" />
     </include>
   </group>
-
+  
   <!-- Launch recognition pipeline -->
   <include file="$(find jsk_pcl_ros)/sample/tabletop_object_detector.launch">
     <arg name="input" value="/head_camera/depth_registered/points" />
@@ -35,8 +40,14 @@
     <arg name="launch_tracking" value="false" />
     <arg name="launch_rviz" value="false" />
     <arg name="publish_tf" value="true" />    
+  </include >
+  
+  <!-- to make box -->
+  <include file="$(find jsk_pcl_ros)/launch/hsi_color_filter.launch">
+    <arg name="INPUT" value="/head_camera/depth_registered/points"/>
   </include>
-
+    
+    
   <!-- 2d food coords to 3d coords -->
   <node name="pointcloud_screenpoint_nodelet" pkg="nodelet" type="nodelet"
         args="load jsk_pcl/PointcloudScreenpoint $(arg manager)"
