@@ -113,8 +113,8 @@
 
 ;;bounding-box
 (defun get_box_info (*food-pos*)
-  (setq *box_index* nil)
-  (while (eql *box_index* nil)
+  (setq *box-len* nil)
+  (while (eql *box-len* nil)
     (setq *bbox-msg* (one-shot-subscribe *bounding-box-list*
 					 jsk_recognition_msgs::BoundingBoxArray
 					 :after-stamp (ros::time-now)))
@@ -124,31 +124,32 @@
       ;;求めたおかずの位置に最も近いboxを取ってくる
       (dotimes (i (length (send *bbox-msg* :boxes)))
 	(setq bbox (elt (send *bbox-msg* :boxes) i))
-	(let ((waist-to-box (send *tfl* :lookup-transform "WAIST" (send bbox :header :frame_id) (ros::time 0)))
-	      (coords (make-coords :pos (ros::tf-point->pos (send bbox :pose)))))
-	  (format t "coords is ~A~%" coords)
-	  (send coords :transform waist-to-box :world)
-	  (setq dis (abs (- (norm　coords) (norm *food-pos*))))
-	  (if (< dis min_dis)
-	      (progn
-		(format t "distance smaller")
-		(setq min_dis dis)
-		(setq size (ros::tf-point->pos (send bbox :dimensions)))
-		(setq *box-len* (elt size 0))
-		(setq *box-wid* (elt size 1))
-		(setq *box-hei* (elt size 2))
-		))))
-      ))
+	(setq cascoords (send (send *tfl* :lookup-transform "WAIST" (send bbox :header :frame_id) (ros::time 0))
+			   :transform (ros::tf-pose->coords (send bbox :pose))))
+	;;(format t "cascoords is ~A~%" cascoords)
+	(setq coords (send cascoords :worldpos))
+	(format t "coords is ~A~%" coords)
+	(setq dis (abs (- (norm coords) (norm *food-pos*))))
+	(if (< dis min_dis)
+	    (progn
+	      (format t "distance smaller")
+	      (setq min_dis dis)
+	      (setq size (ros::tf-point->pos (send bbox :dimensions)))
+	      (setq *box-len* (elt size 0))
+	      (setq *box-wid* (elt size 1))
+	      (setq *box-hei* (elt size 2))
+	      ))))
+    (format t "box size ~A ~A ~A~%" *box-len* *box-wid* *box-hei*)
+    )
   (draw *food-pos* *box-len* *box-wid* *box-hei*)
   )
-      
   
 
 (look-table)
 (ros::roseus "screenpoint")
 (ros::advertise *pub-topic* geometry_msgs::PointStamped 1)
 (ros::subscribe *sub-topic* geometry_msgs::PointStamped #'screen_point_cb)
-(coral_cb "tv")
+;;(coral_cb "tv")
 (coral_cb "sports ball")
 
 
