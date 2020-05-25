@@ -18,8 +18,11 @@
   <arg name="PUBLISH_POINTS" default="false"/>
   <arg name="manager" default="hiro_lunch_box_nodelet_manager"/>
   
+  <!-- nodelet manager is executed by tabletop_object_detector.launch -->
+  <!--
   <node name="$(arg manager)" pkg="nodelet" type="nodelet" args="manager"
         machine="$(arg cloud_machine)" output="screen" />
+  -->
   
   <group if="$(arg gazebo)">
     <arg name="paused" default="false" />
@@ -35,7 +38,9 @@
     <arg name="input" value="/head_camera/depth_registered/points" />
     <arg name="sensor_frame" value="head_camera_rgb_optical_frame" />
     <arg name="manager" value="$(arg manager)" />
-    <arg name="launch_manager" value="false" />
+    <arg name="machine" value="$(arg cloud_machine)" />
+    <!-- <arg name="launch_manager" value="false" /> -->  <!-- This prevents multi_plane_estimate from running -->
+    <arg name="launch_manager" value="true" />
     <arg name="launch_openni" value="false" />
     <arg name="launch_tracking" value="false" />
     <arg name="launch_rviz" value="false" />
