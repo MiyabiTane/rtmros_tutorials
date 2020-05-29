@@ -158,7 +158,10 @@
 		(setq *box-len* (elt size 0))
 		(setq *box-wid* (elt size 1))
 		(setq *box-hei* (elt size 2))
-		)))))
+		))))
+      (ros::spin-once)
+      (ros::sleep)
+      )
     (format t "box size ~A ~A ~A~%" *box-len* *box-wid* *box-hei*)
     (draw *food-pos* *box-len* *box-wid* *box-hei*)
     (setq sub_list (list *box-len* *box-wid* *box-hei*))
@@ -168,15 +171,137 @@
   ;;(ros::exit)
   )
 
+;;------------------------------------------------------------------------------------------------
+
+(defun find_best_stuff (name_list pos_list box_list)
+  ;;To Do
+  ;;lunchboxの座標は0とかにしとく（使わないけどリストのインデックスは対応させたい）
+  ;;(setq place_list  (#f(650 0 20) #f(650 0 20) ... ))
+  (setq place_list '())
+  )
+
+
+;;To move robot
+(defvar time-scale 1.0)
+
+(defun send-robot ()
+  (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 5000)
+  (send *ri* :wait-interpolation)
+  (sleep-time-scale 800)
+  (irt))
+
+(defun send-robot-faster ()
+  (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 2000)
+  (send *ri* :wait-interpolation)
+  (sleep-time-scale 500)
+  (irt))
+
+(defun sleep-time-scale (tm)
+  (unix:usleep (truncate (* 1000 time-scale tm))))
+
+(defun irt () (send *irtviewer* :draw-objects))
+
+(defun open-hand (which_hand)
+  ;;0:left 1:right
+  (if (= which_hand 0)
+      (send *ri* :stop-grasp :larm)
+    (send *ri* :stop-grasp :rarm))
+  (send *ri* :wait-interpolation))
+
+(defun close-hand (which_hand)
+  (if (= which_hand 0)
+      (send *ri* :start-grasp :larm)
+    (send *ri* :start-grasp :rarm))
+  (send *ri* :wait-interpolation))
+
+
+;;List
+;;pos_list, place_list, name_list, (box_list) 
+
+;;elt pos 1 > 0なら左手で掴む
+(defun grasp-food-l (pos)
+  (send *hironxjsk* :larm :invrese-kinematcs (v+ pos #f(0 0 200)) :world)
+  (send-robot)
+  (open-hand 0)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -180) :world)
+  (send-robot)
+  (close-hand 0)
+  (ros::duration-sleep 2.0)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 200) :world)
+  (send-robot))
+
+
+(defun grasp-food-r (pos)
+  (send *hironxjsk* :rarm :inverse-kinematics (v+ pos #f(0 0 200)) :world)
+  (send-robot)
+  (open-hand 1)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 -180) :world)
+  (close-hand 1)
+  (ros::duration-sleep 2.0)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 200) :world)
+  (send-robot))
+  
+
+(defun place-food-l (place)
+  (send *hironxjsk* :larm :inverse-kinematics (v+ place #f(0 0 200)) :world)
+  (send-robot)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -100) :world)
+  (send-robot)
+  (open-hand 0)
+  (send *hironxjsk* :larm :move-pos #f(0 0 150) :world)
+  (send-robot))
+
+
+(defun place-food-r (place)
+  (send *hironxjsk* :rarm :inverse-kinematics (v+ place #f(0 0 200)) :world)
+  (send-robot)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 -100) :world)
+  (send-robot)
+  (open-hand 1)
+  (send *hironxjsk* :rarm :move-pos #f(0 0 150) :world)
+  (send-robot))
+
+
+(defun stuff-all (name_list pos_list place_list)
+  (dotimes (i *leng*)
+    (setq target-food (elt name_list i))
+    (format t "try to stuff ~A~%" target-food)
+    (setq target-pos (elt pos_list i))
+    (format t "target-pos ~A~%" target-pos)
+    ;;(setq target-place (elt place_list i))
+    (setq target-place #f(650 0 20))
+    (unless (string-equal target-food "tv")
+      (if (> (elt target-pos 1) 0)
+	  (progn
+	    (grasp-food-l target-pos)
+	    (place-food-l target-place))
+      (progn
+	(grasp-food-r target-pos)
+	(place-food-r target-place)))
+      )))
+
+;;--------------------------------------------------------------------------------------------------------
+
 (look-table)
 (ros::roseus "screenpoint")
 (ros::advertise *pub-topic* geometry_msgs::PointStamped 1)
 (ros::subscribe *sub-topic* geometry_msgs::PointStamped #'screen_point_cb)
 (coral_cb)
 
+(format t "name_list ~A~%" name_list)
+(format t "pos_list ~A~%" pos_list)
+(format t "box_list ~A~%" box_list)
 
-(while (ros::ok)
-  (ros::spin-once)
-  (ros::sleep))
+(find_best_stuff name_list pos_list box_list)
+(stuff-all name_list pos_list place_list)
+
+;;(while (ros::ok)
+;;  (ros::spin-once)
+;;  (ros::sleep))
 
 
+
+  
+  
+  
+  
