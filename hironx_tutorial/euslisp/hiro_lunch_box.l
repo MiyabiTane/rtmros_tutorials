@@ -220,45 +220,45 @@
 
 ;;elt pos 1 > 0なら左手で掴む
 (defun grasp-food-l (pos)
-  (send *hironxjsk* :larm :invrese-kinematcs (v+ pos #f(0 0 200)) :world)
+  (send *hironxjsk* :larm :inverse-kinematcs (make-coords :pos (v+ pos #f(0 0 100))))
   (send-robot)
   (open-hand 0)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -180) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -100) :world)
   (send-robot)
   (close-hand 0)
   (ros::duration-sleep 2.0)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 200) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
   (send-robot))
 
 
 (defun grasp-food-r (pos)
-  (send *hironxjsk* :rarm :inverse-kinematics (v+ pos #f(0 0 200)) :world)
+  (send *hironxjsk* :rarm :inverse-kinematics (make-coords :pos (v+ pos #f(0 0 100))))
   (send-robot)
   (open-hand 1)
-  (send *hironxjsk* :rarm :move-end-pos #f(0 0 -180) :world)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 -100) :world)
   (close-hand 1)
   (ros::duration-sleep 2.0)
-  (send *hironxjsk* :rarm :move-end-pos #f(0 0 200) :world)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 100) :world)
   (send-robot))
   
 
 (defun place-food-l (place)
-  (send *hironxjsk* :larm :inverse-kinematics (v+ place #f(0 0 200)) :world)
+  (send *hironxjsk* :larm :inverse-kinematics (make-coords :pos (v+ place #f(0 0 100))))
   (send-robot)
   (send *hironxjsk* :larm :move-end-pos #f(0 0 -100) :world)
   (send-robot)
   (open-hand 0)
-  (send *hironxjsk* :larm :move-pos #f(0 0 150) :world)
+  (send *hironxjsk* :larm :move-pos #f(0 0 100) :world)
   (send-robot))
 
 
 (defun place-food-r (place)
-  (send *hironxjsk* :rarm :inverse-kinematics (v+ place #f(0 0 200)) :world)
+  (send *hironxjsk* :rarm :inverse-kinematics (make-coords :pos (v+ place #f(0 0 100))))r
   (send-robot)
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 -100) :world)
   (send-robot)
   (open-hand 1)
-  (send *hironxjsk* :rarm :move-pos #f(0 0 150) :world)
+  (send *hironxjsk* :rarm :move-pos #f(0 0 100) :world)
   (send-robot))
 
 
@@ -270,7 +270,7 @@
     (format t "target-pos ~A~%" target-pos)
     ;;(setq target-place (elt place_list i))
     (setq target-place #f(650 0 20))
-    (unless (string-equal target-food "tv")
+    (unless (string-equal target-food "tv") ;;tv -> lunchbox
       (if (> (elt target-pos 1) 0)
 	  (progn
 	    (grasp-food-l target-pos)
@@ -295,9 +295,6 @@
 (find_best_stuff name_list pos_list box_list)
 (stuff-all name_list pos_list place_list)
 
-;;(while (ros::ok)
-;;  (ros::spin-once)
-;;  (ros::sleep))
 
 
 
