@@ -58,6 +58,32 @@
     </rosparam>
     <param name="use_sync" value="$(arg USE_SYNC)" />
   </node>
+
+
+  <!-- attention_clipper -->
+  <include file="$(find jsk_pcl_ros_utils)/sample/include/play_rosbag_shelf_bin.xml" />
+
+  <arg name="INPUT_CLOUD" value="/head_camera/depth_registered/points" />
+
+  <node name="attention_clipper"
+        pkg="nodelet" type="nodelet"
+        args="standalone jsk_pcl/AttentionClipper">
+    <remap from="~input/points" to="$(arg INPUT_CLOUD)" />
+    <rosparam>
+      initial_pos: [0.0, -0.05, 0.7]
+      initial_rot: [0, 0, 0.05]
+      dimension_x: 0.3
+      dimension_y: 0.43
+      dimension_z: 0.4
+      frame_id: head_camera_rgb_optical_frame
+    </rosparam>
+  </node>
+
+  <node name="extract_indices"
+        pkg="jsk_pcl_ros" type="extract_indices">
+    <remap from="~input" to="$(arg INPUT_CLOUD)" />
+    <remap from="~indices" to="attention_clipper/output/point_indices" />
+  </node>
   
   
   <!-- Visualization -->
