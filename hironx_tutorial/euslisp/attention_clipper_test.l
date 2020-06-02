@@ -12,8 +12,8 @@
 (setq *sub-topic* "/pointcloud_screenpoint_nodelet/output_point")
 (setq *camera-frame* "head_camera_rgb_optical_frame")
 
-(defvar *attention-box-list* "/attention_clipper/output/box_array")
-
+;;(defvar *attention-box-list* "/segmentation_decomposer/boxes")
+(defvar *attention-box-list* "HSI_color_filter/boxes")
 
 ;; Look at table
 (defun look-table ()
@@ -39,26 +39,31 @@
     bx))
 
 
-(defun attention-cb ()
+(defun attention-cb (color_num)
   (setq find-box 0)
   (while (eql find-box 0)
     (setq *atbox-msg* (one-shot-subscribe *attention-box-list*
 					  jsk_recognition_msgs::BoundingBoxArray
 					  :after-stamp (ros::time-now)))
     (when (> (length (send *atbox-msg* :boxes)) 0)
-      (setq *target-atbox* (elt (send *atbox-msg* :boxes) 0))
-      (setq *target-cube* (bbox->cube *target-atbox*))
-      (objects *target-cube*)
+      (dotimes (i (length (send *atbox-msg* :boxes)))
+	(setq *target-atbox* (elt (send *atbox-msg* :boxes) 0))
+	(setq *target-cube* (bbox->cube *target-atbox*))
+	(cond ((= color_num 0)
+	       (send *target-cube* :set-color :salmon))
+	      ((= color_num 1)
+	       (send *target-cube* :set-color :yellow)))
+	(objects *target-cube*))
       (setq find-box 1))
     ))
 
 
 (look-table)
-;;(attention-cb)
+;;(attention-cb 0)
 (send *hironxjsk* :head :look-at #f(688 -237 16))
 (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 5000)
-(send *ri* :wait-interpolation)
-;;(attention-cb)
+;;(send *ri* :wait-interpolation)
+;;(attention-cb 1)
 
 ;;(while (ros::ok)
   ;;(ros::spin-once)
