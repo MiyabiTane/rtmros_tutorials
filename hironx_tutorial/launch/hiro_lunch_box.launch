@@ -69,8 +69,6 @@
 
 
   <!-- attention_clipper -->
-  <include file="$(find jsk_pcl_ros_utils)/sample/include/play_rosbag_shelf_bin.xml" />
-
   <arg name="INPUT_CLOUD" value="/head_camera/depth_registered/points" />
 
   <node name="attention_clipper"
