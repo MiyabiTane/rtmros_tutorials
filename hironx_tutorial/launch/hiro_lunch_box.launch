@@ -100,7 +100,7 @@
   <group if="$(arg launch_rviz)">
     <node name="rviz"
           pkg="rviz" type="rviz"
-          args="-d $(find hironx_tutorial)/config/hironxjsk_picking_demo.rviz">
+          args="-d $(find hironx_tutorial)/config/hiro_lunch_box.rviz">
     </node>
   </group>
 
