@@ -91,6 +91,9 @@
         pkg="jsk_pcl_ros" type="extract_indices">
     <remap from="~input" to="$(arg INPUT_CLOUD)" />
     <remap from="~indices" to="attention_clipper/output/point_indices" />
+    <rosparam>
+      keep_organized: true
+    </rosparam>
   </node>
   
   
