@@ -73,7 +73,7 @@
 
   <node name="attention_clipper"
         pkg="nodelet" type="nodelet"
-        args="standalone jsk_pcl/AttentionClipper">
+        args="load jsk_pcl/AttentionClipper $(arg manager)">
     <remap from="~input/points" to="$(arg INPUT_CLOUD)" />
     <rosparam>
       initial_pos: [0.0, -0.05, 0.7]
@@ -86,7 +86,8 @@
   </node>
 
   <node name="extract_indices"
-        pkg="jsk_pcl_ros" type="extract_indices">
+        pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/ExtractIndices $(arg manager)">
     <remap from="~input" to="$(arg INPUT_CLOUD)" />
     <remap from="~indices" to="attention_clipper/output/point_indices" />
     <rosparam>
