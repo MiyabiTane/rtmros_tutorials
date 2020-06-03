@@ -43,7 +43,7 @@
 
 ;;Only for draw
 (defun draw (*food-pos* *box-len* *box-wid* *box-hei*)
-  (setq *target-food* (make-cube *box-len* *box-wid* *box-hei*))
+  (setq *target-food* (make-cube *box-wid* *box-len* *box-hei*))
   (send *target-food* :locate *food-pos*)
   (send *target-food* :set-color :salmon)
   (objects *target-food*)
@@ -149,7 +149,12 @@
 	  ;;(format t "cascoords is ~A~%" cascoords)
 	  (setq coords (send cascoords :worldpos))
 	  (format t "coords is ~A~%" coords)
-	  (setq dis (abs (- (norm coords) (norm *food-pos*))))
+	  (setq coords-x (elt coords 0))
+	  (setq coords-y (elt coords 1))
+	  (setq food-pos-x (elt *food-pos* 0))
+	  (setq food-pos-y (elt *food-pos* 1))
+	  (setq dis (sqrt (+ (expt (- coords-x food-pos-x) 2) (expt (- coords-y food-pos-y) 2))))
+	  ;;(setq dis (abs (- (norm coords) (norm *food-pos*))))
 	  (if (< dis min_dis)
 	      (progn
 		(format t "distance smaller~%")

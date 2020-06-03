@@ -12,8 +12,8 @@
 (setq *sub-topic* "/pointcloud_screenpoint_nodelet/output_point")
 (setq *camera-frame* "head_camera_rgb_optical_frame")
 
-;;(defvar *attention-box-list* "/segmentation_decomposer/boxes")
-(defvar *attention-box-list* "HSI_color_filter/boxes")
+(defvar *attention-box-list* "/segmentation_decomposer/boxes")
+;;(defvar *attention-box-list* "HSI_color_filter/boxes")
 
 ;; Look at table
 (defun look-table ()
@@ -59,11 +59,11 @@
 
 
 (look-table)
-;;(attention-cb 0)
+(attention-cb 0)
 (send *hironxjsk* :head :look-at #f(688 -237 16))
 (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 5000)
-;;(send *ri* :wait-interpolation)
-;;(attention-cb 1)
+(send *ri* :wait-interpolation)
+(attention-cb 1)
 
 ;;(while (ros::ok)
   ;;(ros::spin-once)
