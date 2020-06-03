@@ -69,28 +69,30 @@
 
 
   <!-- attention_clipper -->
-  <include file="$(find jsk_pcl_ros_utils)/sample/include/play_rosbag_shelf_bin.xml" />
-
   <arg name="INPUT_CLOUD" value="/head_camera/depth_registered/points" />
 
   <node name="attention_clipper"
         pkg="nodelet" type="nodelet"
-        args="standalone jsk_pcl/AttentionClipper">
+        args="load jsk_pcl/AttentionClipper $(arg manager)">
     <remap from="~input/points" to="$(arg INPUT_CLOUD)" />
     <rosparam>
-      initial_pos: [0.0, -0.05, 0.7]
-      initial_rot: [0, 0, 0.05]
-      dimension_x: 0.3
-      dimension_y: 0.43
-      dimension_z: 0.4
-      frame_id: head_camera_rgb_optical_frame
+      initial_pos: [0.9, 0, 0]
+      initial_rot: [0, 0, 0]
+      dimension_x: 1.0
+      dimension_y: 1.0
+      dimension_z: 0.3
+      frame_id: WAIST
     </rosparam >
   </node>
 
   <node name="extract_indices"
-        pkg="jsk_pcl_ros" type="extract_indices">
+        pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/ExtractIndices $(arg manager)">
     <remap from="~input" to="$(arg INPUT_CLOUD)" />
     <remap from="~indices" to="attention_clipper/output/point_indices" />
+    <rosparam>
+      keep_organized: true
+    </rosparam>
   </node>
   
   
@@ -98,7 +100,7 @@
   <group if="$(arg launch_rviz)">
     <node name="rviz"
           pkg="rviz" type="rviz"
-          args="-d $(find hironx_tutorial)/config/hironxjsk_picking_demo.rviz">
+          args="-d $(find hironx_tutorial)/config/hiro_lunch_box.rviz">
     </node>
   </group>
 
