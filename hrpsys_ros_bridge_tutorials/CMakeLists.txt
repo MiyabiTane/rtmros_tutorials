@@ -280,19 +280,9 @@ endif()
 # HIRONXJSK
 compile_openhrp_model_for_closed_robots(HIRONXJSK HIRONXJSK HIRONXJSK
   --conf-dt-option "0.005"
-  --conf-file-option "# This conf should be backup of /opt/jsk/etc/HIRONX/hrprtc/Robot.conf inside HIRONXJSK"
-  --conf-file-option "# model should be /opt/jsk/etc/HIRONX/model/main.wrl inside HIRONXJSK"
-  --conf-file-option "pdgains.file_name: /opt/jsk/etc/HIRONX/hrprtc/PDgains.sav"
-  --conf-file-option "naming.formats: %n.rtc"
+  --conf-file-option "# This conf is only for hrpsys simulation and different from /opt/jsk/etc/HIRONX/hrprtc/Robot.conf inside HIRONXJSK"
   --conf-file-option "# RTC disable/enable settings which will be loaded via RobotHardware"
   --conf-file-option "CollisionDetector.enable: YES"
-  --conf-file-option "# for HIRO hand servo"
-  --conf-file-option "servo.id: 2,3,4,5, 6,7,8,9"
-  --conf-file-option "servo.offset: -0.80,0.0,-0.85,0.0, -0.85,0.0,-0.89,0.0"
-  --conf-file-option "servo.devname: /dev/serusb1"
-  --conf-file-option "servo.dir 1,1,-1,-1,1,1,-1,-1"
-  --conf-file-option "# for RemoveForceSensorLinkOffset"
-  --conf-file-option "forcemoment_offset_params: /opt/jsk/etc/HIRONX/hrprtc/force_sensor_calib_20191127"
   --conf-file-option "# for ImpedanceController"
   --conf-file-option "end_effectors: rarm,RARM_JOINT5,CHEST_JOINT0,-0.05,0,0,0,1,0,1.5708, larm,LARM_JOINT5,CHEST_JOINT0,-0.05,0,0,0,1,0,1.5708,"
   --conf-file-option "# for CollisionDetector"
@@ -615,8 +605,10 @@ if(EXISTS ${hrp2_models_MODEL_DIR}/HRP3HAND_R/HRP3HAND_Rmain.wrl)
 endif()
 
 # for HIRONXJSK (adding sensor, and fixing some points for gazebo)
-attach_sensor_and_endeffector_to_hrp2jsk_urdf(HIRONXJSK HIRONXJSK.urdf
-  HIRONXJSK_SENSORS.urdf hironxjsk.yaml)
+if(${hrp2_models_FOUND})
+  attach_sensor_and_endeffector_to_hrp2jsk_urdf(HIRONXJSK HIRONXJSK.urdf
+    HIRONXJSK_SENSORS.urdf hironxjsk.yaml)
+endif(${hrp2_models_FOUND})
 
 macro (generate_staro_hand_model _robot_name _dir_name)
   set(_model_dir "${PROJECT_SOURCE_DIR}/models/")
