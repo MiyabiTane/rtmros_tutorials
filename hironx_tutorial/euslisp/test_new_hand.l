@@ -36,6 +36,27 @@
   (send-right-hand 2.0)
   )
 
+;;diag-chopsticks
+(defun init-pose-20201001 ()
+  (send *hironxjsk* :reset-manip-pose)
+  (send *hironxjsk* :larm_joint4 :joint-angle -80)
+  (send *hironxjsk* :rarm_joint1 :joint-angle 20) 
+  (send *hironxjsk* :rarm :move-end-pos #f(150 0 300))
+  (send-robot)
+  ;;look table
+  (send *hironxjsk* :head :look-at
+        (send (send (send *hironxjsk* :torso :end-coords :copy-worldcoords)
+                    :translate #f(750 0 0)) :worldpos))
+  (send *hironxjsk* :head :look-at #f(600 0 0))
+  (send-robot)
+  ;;open hand
+  (send *hironxjsk* :hand-angle-vector :lhand #f(20.449 -20.449 -20.449 20.449))
+  (send-left-hand 2.0)
+  (send *hironxjsk* :hand-angle-vector :rhand #f(20.449 -20.449 -20.449 20.449))
+  (send-right-hand 2.0)
+  )
+
+
 (defun open-chopsticks ()
   (send *hironxjsk* :hand-angle-vector :lhand #f(20.449 -20.449 -20.449 20.449))
   (send-left-hand 2.0)
