@@ -39,7 +39,8 @@
 ;;diag-chopsticks
 (defun init-pose-20201001 ()
   (send *hironxjsk* :reset-manip-pose)
-  (send *hironxjsk* :larm_joint4 :joint-angle -80)
+  (send *hironxjsk* :larm_joint4 :joint-angle -35)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
   (send *hironxjsk* :rarm_joint1 :joint-angle 20) 
   (send *hironxjsk* :rarm :move-end-pos #f(150 0 300))
   (send-robot)
