@@ -12,6 +12,7 @@
 
 (defvar *bbox-list* "/segmentation_decomposer/boxes")
 
+(setq *sub-topic* "/lhsensor")
 
 ;;diag-chopsticks
 (defun init-pose-20201001 ()
@@ -72,18 +73,51 @@
       ))
   )
 
-(defun get-range ()
+(defun move_to ()
   ;;close chopsticks 
   (send *hironxjsk* :hand-angle-vector :lhand #f(-10.499 10.499 10.499 -10.499))
   (send-left-hand 1.0)
   ;;length of chopsticks
-  (setq *off-set* (float-vector -50 0 150))
+  (setq *off-set* (float-vector -50 -50 150)) ;;To Do x,y -> use box size
   (setq *start-pos* (v+ *off-set* *coords*))
   (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
   (setq *move* (v- *start-pos* (send *hiro-pose* :pos))) 
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :larm 
 	:inverse-kinematics *hiro-pose*)
-  ;;(send-robot)
+  (send-robot)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -70) :world)
+  (send-robot)
   )
-  
+
+(defun wrench_cb(msg)
+  (setq force_data (send (send msg :wrench) :force))
+  (setq x_2 (send force_data :x))
+  (setq y_2 (send force_data :y))
+  (setq z_2 (send force_data :z))
+  (setq norm_2 (+ x_2 y_2 z_2))
+  )
+
+(defun get_range()
+  ;;know right edge
+  (setq norm_2 10)
+  (while (< norm_2 50)
+    (format t "norm_2 is ~A~%" norm_2)
+    (send *hironxjsk* :larm :move-end-pos #f(0 -5 0))
+    (send-robot)
+    )
+  (setq hiro-hand-pos (elt (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) 0))
+  (setq *right-edge* (v+ hiro-hand-pos #f(50 50 -150)))
+  (format t "right edge is ~%")
+  )
+
+(init-pose-20201001)
+(defun main()
+  (setq *coords* #f(0 -100 0))
+  (while (< (elt *coords* 1) 0)
+    (find-box)
+    )
+  (move_to)
+  (get_range)
+  )
+(ros::subscribe *sub-topic* geometry_msgs::WrenchStamped #'wrench_cb)
