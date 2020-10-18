@@ -62,14 +62,14 @@ class TalkWith:
     
     def __init__(self):
         self.cb_flag = False
-        self.voice = 'voice_kal_diphone'
-        self.volume = 1.0
+        self.voice = "" 
+        self.volume = 0.1
         self.str_candidate = ''
         self.like_list = []
         self.dislike_list = []
         self.want_to_eat = []
-        #rospy.init_node('hiro_talk')
-        self.soundhandle = SoundClient()
+        rospy.init_node('hiro_talk')
+        self.soundhandle = SoundClient(sound_action='robotsound_jp', sound_topic='robotsound_jp')
         rospy.sleep(1.0)
 
     def talk_cb(self, msg):  
@@ -214,12 +214,11 @@ class TalkWith:
         print(new_want)
         return new_like, new_dislike, new_want
 
-"""
 #talk
 name_list = ["rolled_egg", "fried_chicken", "broccoli", "tomato", "octopus_wiener", "fried_chicken", "rolled_egg", "broccoli", "octopus_wiener", "tomato"]
 hiro_talk = TalkWith()
 hiro_talk.main_before_stuff(name_list)
-"""
+
 """
 #xlsx
 new_like = [["rolled_egg", "rolled_egg"], ["tomato", "fried_chicken"]]
