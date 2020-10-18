@@ -12,10 +12,10 @@
 (ros::roseus-add-msgs "std_msgs")
 
 (setq pub_box_msg (instance jsk_recognition_msgs::Rect :init))
-(send pub_box_msg :x 1 *front*)
-(send pub_box_msg :y 2 *left*)
-(send pub_box_msg :width 10 *length*)
-(send pub_box_msg :height 20 *width*)
+(send pub_box_msg :x *front*)
+(send pub_box_msg :y *left*)
+(send pub_box_msg :width *length*)
+(send pub_box_msg :height *width*)
 
 (setq pub_food_msg (instance geometry_msgs::PoseArray :init))
 (dotimes (i (length box_list))
