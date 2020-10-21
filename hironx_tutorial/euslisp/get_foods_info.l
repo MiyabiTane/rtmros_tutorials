@@ -1,5 +1,31 @@
 #!/usr/bin/env roseus
 
+(load "package://hrpsys_ros_bridge_tutorials/euslisp/hironxjsk-interface.l")
+(hironxjsk-init)
+(objects (list *hironxjsk*))
+
+;;Rostopic
+(ros::load-ros-package "jsk_recognition_msgs")
+(ros::load-ros-package "std_msgs")
+(ros::load-ros-package "geometry_msgs")
+(setq *pub-topic* "/head_camera/rgb/image_rect_color/screenpoint")
+(setq *sub-topic* "/pointcloud_screenpoint_nodelet/output_point")
+(setq *camera-frame* "head_camera_rgb_optical_frame")
+
+(defvar *coral-food-rects* "edgetpu_object_detector/output/rects")
+(defvar *coral-food-class* "edgetpu_object_detector/output/class")
+(defvar *bounding-box-list* "/segmentation_decomposer/boxes")
+
+;;keep info
+(setq name_list '())
+(setq pos_list '())
+(setq box_list '())
+
+;;use tf
+(unless (boundp '*tfl*)
+  (setq *tfl* (instance ros::transform-listener :init)))
+
+
 (defun send-robot ()
   (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 2000)
   (send *ri* :wait-interpolation)
@@ -37,6 +63,17 @@
   )
 
 
+;; Look at table
+(defun look-table ()
+  (send *hironxjsk* :reset-manip-pose)
+  (send *hironxjsk* :head :look-at
+        (send (send (send *hironxjsk* :torso :end-coords :copy-worldcoords)
+                    :translate #f(750 0 0)) :worldpos))
+  (send *irtviewer* :draw-objects)  ;; Only for display
+  (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 1000)
+  (send *ri* :wait-interpolation)
+  )
+
 ;;Only for draw
 (defun draw (*food-pos* *box-len* *box-wid* *box-hei*)
   (setq *target-food* (make-cube *box-wid* *box-len* *box-hei*))
@@ -46,24 +83,39 @@
   )
 
 
-;;make center-coords and publish
-(defun publish-center-coords (*food-rects*)
+;make left-top coords and publish
+(defun publish-left-top-coords (*food-rects*)
+  (format t "publish food-coords~%")
+  (setq x (send *food-rects* :x))
+  (setq y (send *food-rects* :y))
+  ;;publish
+  (let* ((x x)
+	 (y y)
+	 (pub-msg (instance geometry_msgs::Pointstamped :init)))
+    (format t "left top ~A ~A ~%" x y)
+    (send (send pub-msg :point) :x x)
+    (send (send pub-msg :point) :y y)
+    (send (send pub-msg :point) :z 0)
+    (ros::publish *pub-topic* pub-msg)
+    ))
+
+;;make right-bottom coords and publish
+(defun publish-right-bottom-coords (*food-rects*)
   (format t "publish food-coords~%")
   (setq x (send *food-rects* :x))
   (setq y (send *food-rects* :y))
   (setq width (send *food-rects* :width))
   (setq height (send *food-rects* :height))
   ;;publish
-  (let* ((x (+ x (/ width 2)))
-	 (y (+ y (/ height 2)))
+  (let* ((x (+ x width 2))
+	 (y (+ y height 2))
 	 (pub-msg (instance geometry_msgs::Pointstamped :init)))
-    (format t "x y ~A ~A ~%" x y)
+    (format t "right bottom ~A ~A ~%" x y)
     (send (send pub-msg :point) :x x)
     (send (send pub-msg :point) :y y)
     (send (send pub-msg :point) :z 0)
     (ros::publish *pub-topic* pub-msg)
     ))
- 
 
 ;;Subscribe Coral and Publish
 (defun coral_cb ()
@@ -89,8 +141,13 @@
 	(setq name_list (append name_list (list str)))
 	(setq *food-rects* (elt (send *food-rects-msg* :rects) index))
 	(setq index (+ index 1))
-	(publish-center-coords *food-rects*)
+	(publish-left-top-coords *food-rects*)
 	(until (= catch-pubinfo 1)
+	       (ros::spin-once)
+	       (ros::sleep)
+	       )
+	(publish-right-bottom-coords *food-rects*)
+	(until (= catch-pubinfo 2)
 	       (ros::spin-once)
 	       (ros::sleep)
 	       ))
@@ -114,15 +171,31 @@
   (format t "screen_point_cb~%")
   (setq *food-pos* (screenpoint->world msg))
   (setq pos_list (list-insert *food-pos* (length pos_list) pos_list))
-  (setq catch-pubinfo 1)
+  (when (= catch-pubinfo 1)
+    (setq left (elt *lf-pos* 0))
+    (setq top (elt *lf-pos* 1))
+    (setq right (elt *food-pos* 0))
+    (setq bottom (elt *food-pos* 1))
+    (setq *center-pos* (float-vector (/ (+ left right) 2) (/ (+ top bottom) 2)))
+    (setq *box-size* (list (- left right) (- top bottom) 0))
+    (setq pos_list (list-insert *center-coords* (length pos_list) pos_list))
+    (setq box_list (list-insert *box-size* (length box_list) box_list))
+    (draw *center-pos* (elt *box-size* 0) (elt *box-size* 1) 10) ;;visualize
+    (setq catch-pubinfo 2)
+    )
+  (when (= catch-pubinfo 0)
+    (setq *lt-pos* *food-pos*)
+    (setq catch-pubinfo 1))
   (when (= (length pos_list) *leng*)
     (format t "pos_list is ~A~%" pos_list)
-    (format t "get box~%")
+    (format t "box list is ~A~%" box_list)
     (ros::unsubscribe *sub-topic*)
-    (get_box_info pos_list))
+    ;;(get_box_info pos_list))
+    )
   )
-
-
+  
+  
+#|  
 ;;bounding-box
 (defun get_box_info (pos_list)
   (dotimes (i (length pos_list))
@@ -171,10 +244,12 @@
   (format t "box_list is ~A~%" box_list)
   ;;(ros::exit)
   )
+|#
 
-(init-pose-20201001)
+(look-table) ;;for simulation
+;;(init-pose-20201001)
 (ros::roseus "screenpoint")
-(ros::advertise *pub-topic* geometry_msgs::PointStamped 1)
-(ros::subscribe *sub-topic* geometry_msgs::PointStamped #'screen_point_cb)
+(ros::advertise *pub-topic* std_msgs::Float64MultiArray 1)
+(ros::subscribe *sub-topic* std_msgs::Float64MultiArray #'screen_point_cb)
 (coral_cb)
 
