@@ -176,7 +176,7 @@
     (setq top (elt *lf-pos* 1))
     (setq right (elt *food-pos* 0))
     (setq bottom (elt *food-pos* 1))
-    (setq *center-pos* (float-vector (/ (+ left right) 2) (/ (+ top bottom) 2)))
+    (setq *center-pos* (float-vector (/ (+ left right) 2) (/ (+ top bottom) 2) 70))
     (setq *box-size* (list (- left right) (- top bottom) 0))
     (setq pos_list (list-insert *center-coords* (length pos_list) pos_list))
     (setq box_list (list-insert *box-size* (length box_list) box_list))

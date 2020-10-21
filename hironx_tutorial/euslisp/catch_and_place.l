@@ -41,15 +41,43 @@
   (send-right-hand 2.0)
   )
 
-(defun catch-food(pos)
+(defun close-tongs ()
+  (send *hironxjsk* :hand-angle-vector :rhand #f(-15.499 15.499 15.499 -15.499))
+  (send-right-hand 2.0)
+  )	
+
+(defun catch-food (pos)
+  ;;same pose 
+  (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
+  (setq pos (v+ pos #f(-110.25 9.0407 64.6251))) ;;tong offset
+  (send *move* (v- pos (send *hiro-pose* :pos)))
+  (send *hiro-pose* :translate *move* :world)
+  (send *hironxjsk* :rarm :inverse-kinematics *hiro-pose*)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 70) :world)
+  (send-robot)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 -70) :world)
+  (send-robot)
+  (close-tongs)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 70) :world)
+  (send-robot)
+  )
+
+(defun place-food (pos)
+  ;;same pose
   (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
   (setq pos (v+ pos #f(-110.25 9.0407 64.6251))) ;;tong offset
   (send *move* (v- pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :rarm :inverse-kinematics *hiro-pose*)
   (send-robot)
-  (send *hironxjsk* :rarm :move-end-pos #f(0 0 70))
-  (send-robot)
+  (open-tongs)
+  )
+
+(defun main()
+  (dotimes (i (length pos_list))
+    (catch-food (elt pos_list i))
+    (place-food (elt place_list i))
+    )
   )
   
 ;;#f(-110.25 9.0407 64.6251) hand-pos - real-pos(rarm)
