@@ -12,10 +12,10 @@
 (ros::roseus-add-msgs "std_msgs")
 
 (setq pub_box_msg (instance jsk_recognition_msgs::Rect :init))
-(send pub_box_msg :x 0) ;;*front*)
-(send pub_box_msg :y 0) ;;*left*)
-(send pub_box_msg :width 30) ;;*length*)
-(send pub_box_msg :height 40) ;;*width*)
+(send pub_box_msg :x *front*)
+(send pub_box_msg :y *left*)
+(send pub_box_msg :width *length*)
+(send pub_box_msg :height *width*)
 
 ;;input examples
 ;;(setq box_list (list (list 4 2 2) (list 4 4 4) (list 4 4 4) (list 3 3 3) (list 2 2 3.5) (list 4 4 4) (list 4 2 2) (list 4 4 4) (list 2 2 3.5) (list 3 3 3)))

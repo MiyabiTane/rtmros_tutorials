@@ -69,6 +69,7 @@
   (send *move* (v- pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :rarm :inverse-kinematics *hiro-pose*)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 20))
   (send-robot)
   (open-tongs)
   )

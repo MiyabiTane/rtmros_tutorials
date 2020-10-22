@@ -24,7 +24,7 @@
     (setq sub_lst '())
     (setq x-pos (send (send (elt stuff_pos_list i) :position) :x))
     (setq y-pos (send (send (elt stuff_pos_list i) :position) :y))
-    (setq z-pos 100) ;;(send (send (elt stuff_pos_list i) :position) :z))
+    (setq z-pos (send (send (elt stuff_pos_list i) :position) :z))
     (setq sub_lst (float-vector x-pos y-pos z-pos))
     (setq place_list (list-insert sub_lst (length place_list) place_list))
     )
