@@ -13,6 +13,8 @@
   <arg name="USE_SYNC" default="false"/>
   <arg name="PUBLISH_POINTS" default="false"/>
   <arg name="manager" default="hiro_lunch_box_nodelet_manager"/>
+
+  <arg name="camera_frame_id" default="head_camera_rgb_optical_frame"/>
   
   <!-- nodelet manager is executed by tabletop_object_detector.launch -->
   <!--
@@ -33,8 +35,8 @@
   <!-- Launch recognition pipeline -->
   <include file="$(find jsk_pcl_ros)/sample/tabletop_object_detector.launch">
     <!-- arg name="input" value="/head_camera/depth_registered/points" / -->
-    <arg name="input" value="/extract_indices/output" />
-    <arg name="sensor_frame" value="head_camera_rgb_optical_frame" />
+    <arg name="input" value="extract_indices/output" />
+    <arg name="sensor_frame" value="$(arg camera_frame_id)" />
     <arg name="manager" value="$(arg manager)" />
     <arg name="machine" value="$(arg cloud_machine)" />
     <!-- <arg name="launch_manager" value="false" /> -->  <!-- This prevents multi_plane_estimate from running -->
@@ -43,7 +45,55 @@
     <arg name="launch_tracking" value="false" />
     <arg name="launch_rviz" value="false" />
     <arg name="publish_tf" value="true" />    
-  </include >
+  </include>
+  
+  <node name="plane_extraction_ssd" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/MultiPlaneExtraction $(arg manager)"
+        output="screen"
+        machine="$(arg cloud_machine)">
+    <remap from="~input" to="extract_indices/output" />
+    <remap from="~indices" to="multi_plane_estimate/output_refined" />
+    <remap from="~input_polygons" to="multi_plane_estimate/output_refined_polygon" />
+    <remap from="~input_coefficients" to="multi_plane_estimate/output_refined_coefficients" />
+    <rosparam subst_value="true">
+      use_sensor_frame: true
+      keep_organized: true
+      sensor_frame: $(arg camera_frame_id)
+      min_height: 0
+    </rosparam>
+  </node>
+
+  <node name="rects_to_cpi_ssd"
+        pkg="jsk_recognition_utils" type="rect_array_to_cluster_point_indices.py"
+        output="screen">
+    <remap from="~input" to="/edgetpu_object_detector/output/rects"/>
+    <remap from="~input/info" to="$(arg image)/camera_info"/>
+    <rosparam>
+      approximate_sync: false
+      use_info: true
+    </rosparam>
+  </node>
+
+  <node name="image_cpi_decomposer_ssd"
+        pkg="jsk_perception" type="image_cluster_indices_decomposer.py"
+        output="screen">
+    <remap from="~input" to="$(arg image)/$(arg image_type)"/>
+    <remap from="~input/cluster_indices" to="rects_to_cpi_ssd/output" />
+  </node>
+
+  <node name="segmentation_decomposer_ssd" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/ClusterPointIndicesDecomposer $(arg manager)"
+        output="screen"
+        machine="$(arg cloud_machine)">
+    <remap from="~input" to="plane_extraction_ssd/output" />
+    <remap from="~target" to="rects_to_cpi_ssd/output" />
+    <rosparam subst_value="true">
+      align_boxes: false
+      align_boxes_with_plane: false
+      use_pca: true
+    </rosparam>
+  </node>
+
 
 
   <!-- to make box -->
