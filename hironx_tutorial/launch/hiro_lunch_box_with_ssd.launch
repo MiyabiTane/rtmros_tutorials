@@ -46,16 +46,38 @@
     <arg name="launch_rviz" value="false" />
     <arg name="publish_tf" value="true" />    
   </include>
+
+  <!-- ssd -->
+  <node name="multi_plane_estimate_ssd" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/OrganizedMultiPlaneSegmentation $(arg manager)"
+        output="screen"
+        machine="$(arg cloud_machine)">
+    <remap from="~input" to="$(arg inpoints)" />
+    <rosparam>
+      max_curvature: 0.01
+      estimate_normal: true
+      ransac_refine_outlier_distance_threshold: 0.001 
+    </rosparam>
+  </node>
   
+  <node name="polygon_magnifier_ssd" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl_utils/PolygonMagnifier $(arg manager)"
+        output="screen"
+        machine="$(arg cloud_machine)">
+    <remap from="~input" to="multi_plane_estimate_ssd/output_refined_polygon" />
+  </node>
+
   <node name="plane_extraction_ssd" pkg="nodelet" type="nodelet"
         args="load jsk_pcl/MultiPlaneExtraction $(arg manager)"
         output="screen"
         machine="$(arg cloud_machine)">
     <remap from="~input" to="extract_indices/output" />
-    <remap from="~indices" to="multi_plane_estimate/output_refined" />
-    <remap from="~input_polygons" to="multi_plane_estimate/output_refined_polygon" />
-    <remap from="~input_coefficients" to="multi_plane_estimate/output_refined_coefficients" />
+    <remap from="~indices" to="multi_plane_estimate_ssd/output_refined" />
+    <remap from="~input_polygons" to="multi_plane_estimate_ssd/output_refined_polygon" />
+    <remap from="~input_coefficients" to="multi_plane_estimate_ssd/output_refined_coefficients" />
     <rosparam subst_value="true">
+      use_async: true
+      max_queue_size: 1000
       use_sensor_frame: true
       keep_organized: true
       sensor_frame: $(arg camera_frame_id)
@@ -88,9 +110,25 @@
     <remap from="~input" to="plane_extraction_ssd/output" />
     <remap from="~target" to="rects_to_cpi_ssd/output" />
     <rosparam subst_value="true">
+      approximate_sync: true
+      queue_size: 1000
+      min_size: -1
       align_boxes: false
       align_boxes_with_plane: false
       use_pca: true
+    </rosparam>
+  </node>
+
+  <!-- approximate sync for euslisp node -->
+  <node name="edgetpu_boxes_synchronizer" pkg="jsk_topic_tools" type="synchronize_republish.py"
+        output="screen">
+    <rosparam subst_value="true">
+      topics:
+        - /edgetpu_object_detector/output/class
+        - segmentation_decomposer_ssd/boxes
+      approximate_sync: true
+      slop: 0.01
+      queue_size: 1000
     </rosparam>
   </node>
 
@@ -100,22 +138,6 @@
   <!-- include file="$(find jsk_pcl_ros)/launch/hsi_color_filter.launch">
     <arg name="INPUT" value="/head_camera/depth_registered/points" />
   </include -->
-    
-    
-  <!-- 2d food coords to 3d coords -->
-  <node name="pointcloud_screenpoint_nodelet" pkg="nodelet" type="nodelet"
-        args="load jsk_pcl/PointcloudScreenpoint $(arg manager)"
-        output="screen" clear_params="true" respawn="true"
-        machine="$(arg cloud_machine)">
-    <remap from="~points" to="$(arg inpoints)" />
-    <remap from="~point" to="$(arg image)/$(arg image_type)/screenpoint" />
-    <rosparam>
-      queue_size: 10
-      crop_size: 10
-      search_size: 16
-    </rosparam>
-    <param name="use_sync" value="$(arg USE_SYNC)" />
-  </node>
 
 
   <!-- attention_clipper -->
@@ -144,8 +166,38 @@
       keep_organized: true
     </rosparam>
   </node>
-  
-  
+
+  <!-- to syncronize -->
+  <!--
+  <node name="throttle_segmentation_sync" pkg="nodelet" type="nodelet"
+        args="load jsk_topic_tools/LightweightThrottle $(arg manager)"
+        output="screen"
+        machine="$(arg cloud_machine)">
+    <remap from="~input" to="edgetpu_object_detector/output/class" />
+    <remap from="~output" to="/edgetpu_object_detector/output/class_throttle" />
+    <rosparam>
+     update_rate: 0.2
+    </rosparam>
+  </node>
+  -->
+
+  <!-- 2d food coords to 3d coords -->
+  <!-- 
+  <node name="pointcloud_screenpoint_nodelet" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/PointcloudScreenpoint $(arg manager)"
+        output="screen" clear_params="true" respawn="true"
+        machine="$(arg cloud_machine)">
+    <remap from="~points" to="$(arg inpoints)" />
+    <remap from="~point" to="$(arg image)/$(arg image_type)/screenpoint" />
+    <rosparam>
+      queue_size: 10
+      crop_size: 10
+      search_size: 16
+    </rosparam>
+    <param name="use_sync" value="$(arg USE_SYNC)" />
+  </node>
+  -->
+
   <!-- Visualization -->
   <group if="$(arg launch_rviz)">
     <node name="rviz"
