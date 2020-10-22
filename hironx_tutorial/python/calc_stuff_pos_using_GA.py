@@ -292,12 +292,12 @@ def main():
         pose.position.y = stuff_pos[1]
         pose.position.z = box_list[i][2]
         pose_msg.poses.append(pose)
-    #pub2 = rospy.Publisher('/calc_finish_flag', Int16, queue_size = 1)
-    #flag_msg = Int16()
-    #flag_msg.data = 1
+    pub2 = rospy.Publisher('/calc_finish_flag', Int16, queue_size = 1)
+    flag_msg = Int16()
+    flag_msg.data = 1
     while not rospy.is_shutdown():
         pub.publish(pose_msg) 
-        #pub2.publish(flag_msg)
+        pub2.publish(flag_msg)
         rospy.sleep(0.1)
 
 main()
