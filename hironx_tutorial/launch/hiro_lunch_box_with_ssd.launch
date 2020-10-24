@@ -50,7 +50,7 @@
   <!-- ssd -->
   <node name="multi_plane_estimate_ssd" pkg="nodelet" type="nodelet"
         args="load jsk_pcl/OrganizedMultiPlaneSegmentation $(arg manager)"
-        output="screen"
+        output="screen" respawn="true"
         machine="$(arg cloud_machine)">
     <remap from="~input" to="$(arg inpoints)" />
     <rosparam>
@@ -62,14 +62,14 @@
   
   <node name="polygon_magnifier_ssd" pkg="nodelet" type="nodelet"
         args="load jsk_pcl_utils/PolygonMagnifier $(arg manager)"
-        output="screen"
+        output="screen" respawn="true"
         machine="$(arg cloud_machine)">
     <remap from="~input" to="multi_plane_estimate_ssd/output_refined_polygon" />
   </node>
 
   <node name="plane_extraction_ssd" pkg="nodelet" type="nodelet"
         args="load jsk_pcl/MultiPlaneExtraction $(arg manager)"
-        output="screen"
+        output="screen" respawn="true"
         machine="$(arg cloud_machine)">
     <remap from="~input" to="extract_indices/output" />
     <remap from="~indices" to="multi_plane_estimate_ssd/output_refined" />
@@ -87,7 +87,7 @@
 
   <node name="rects_to_cpi_ssd"
         pkg="jsk_recognition_utils" type="rect_array_to_cluster_point_indices.py"
-        output="screen">
+        output="screen" respawn="true">
     <remap from="~input" to="/edgetpu_object_detector/output/rects"/>
     <remap from="~input/info" to="$(arg image)/camera_info"/>
     <rosparam>
@@ -98,14 +98,14 @@
 
   <node name="image_cpi_decomposer_ssd"
         pkg="jsk_perception" type="image_cluster_indices_decomposer.py"
-        output="screen">
+        output="screen" respawn="true">
     <remap from="~input" to="$(arg image)/$(arg image_type)"/>
     <remap from="~input/cluster_indices" to="rects_to_cpi_ssd/output" />
   </node>
 
   <node name="segmentation_decomposer_ssd" pkg="nodelet" type="nodelet"
         args="load jsk_pcl/ClusterPointIndicesDecomposer $(arg manager)"
-        output="screen"
+        output="screen" respawn="true"
         machine="$(arg cloud_machine)">
     <remap from="~input" to="plane_extraction_ssd/output" />
     <remap from="~target" to="rects_to_cpi_ssd/output" />
@@ -121,7 +121,7 @@
 
   <!-- approximate sync for euslisp node -->
   <node name="edgetpu_boxes_synchronizer" pkg="jsk_topic_tools" type="synchronize_republish.py"
-        output="screen">
+        output="screen" respawn="true">
     <rosparam subst_value="true">
       topics:
         - /edgetpu_object_detector/output/class
@@ -144,7 +144,7 @@
   <arg name="INPUT_CLOUD" value="/head_camera/depth_registered/points" />
 
   <node name="attention_clipper"
-        pkg="nodelet" type="nodelet"
+        pkg="nodelet" type="nodelet" respawn="true"
         args="load jsk_pcl/AttentionClipper $(arg manager)">
     <remap from="~input/points" to="$(arg INPUT_CLOUD)" />
     <rosparam>
@@ -158,7 +158,7 @@
   </node>
 
   <node name="extract_indices"
-        pkg="nodelet" type="nodelet"
+        pkg="nodelet" type="nodelet" respawn="true"
         args="load jsk_pcl/ExtractIndices $(arg manager)">
     <remap from="~input" to="$(arg INPUT_CLOUD)" />
     <remap from="~indices" to="attention_clipper/output/point_indices" />
