@@ -179,8 +179,8 @@ class StuffFood():
         color_dict = {"tomato": (0,0,255), "rolled_egg": (0,255,255), "octopus_wiener": (255,0,255), "fried_chicken": (0,0,128), "broccoli": (0,128,0)}
         for i in range(len(best_stuff)):
             if i in cannot_stuff:
-                point_1 = (300 - int(self.box_dict[i][0]), down)
-                point_2 = (300, down - int(self.box_dict[i][1]))
+                point_1 = (300 - int(self.box_dict[i][0]), int(down))
+                point_2 = (300, int(down) - int(self.box_dict[i][1]))
                 down -= self.box_dict[i][1]
             else:
                 point_1 = (int(best_stuff[i][0] - self.box_dict[i][0]//2), int(best_stuff[i][1] - self.box_dict[i][1]//2))
@@ -252,7 +252,6 @@ class SubscribeVisualInfo():
         self.box_list = copy    
             
     def get_vis_info(self):
-        #To Do: subscribe these informations
         rospy.init_node("hiro_lunchbox")
         while self.flag1:
             rospy.Subscriber("/lunchbox_info", Rect, self.lunchbox_info_cb)
@@ -275,6 +274,7 @@ def get_talk_info(name_list):
     return like_list, dislike_list, want_to_eat
 
 def main():
+    print("Called GA main")
     #subscribe info from Coral
     visual_info = SubscribeVisualInfo()
     box_size, name_list, box_list = visual_info.get_vis_info()

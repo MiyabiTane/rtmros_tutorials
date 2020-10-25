@@ -197,7 +197,7 @@
 (defun get_range()
   (move_left_right 1 #f(0 -5 0)) ;;right
   (setq *right-edge* *edge*)
-  (move_front_back 0.1 #f(5 0 0)) ;;back
+  (move_front_back 0.05 #f(5 0 0)) ;;back
   (setq *back-edge* *edge*)
   (move_left #f(0 5 0)) ;;left
   (setq *left-edge* *edge*)
