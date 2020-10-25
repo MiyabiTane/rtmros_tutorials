@@ -220,7 +220,7 @@
   )
 
 (defun main()
-  (move_hand_out_of_camera)
+  ;;(move_hand_out_of_camera)
   (setq *coords* #f(0 -100 0))
   (while (< (elt *coords* 1) 0)
     (find-box)
@@ -228,7 +228,8 @@
   (move_to)
   (get_range)
   (box_vis)
-  (move_hand_out_of_camera)
+  ;;(move_hand_out_of_camera)
+  (init-pose-20201001)
   )
 
 (ros::subscribe *sub-topic* geometry_msgs::WrenchStamped #'wrench_cb)
