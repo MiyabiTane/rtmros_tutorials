@@ -83,17 +83,19 @@
     <remap from="~input" to="$(arg inpoints)" />
     <remap from="~indices" to="$(arg INPUT_INDICES)" />
     <rosparam>
+      approximate_sync: true
       keep_organized: true
     </rosparam>
   </node>
 
-  
+
   <!-- attention_clipper -->
-  <arg name="MASKED_POINTS" value="/extract_masked_indices/output" />
-  <node name="attention_clipper" 
+  <arg name="INPUT_CLOUD" value="/head_camera/depth_registered/points" />
+
+  <node name="attention_clipper"
         pkg="nodelet" type="nodelet" respawn="true"
         args="load jsk_pcl/AttentionClipper $(arg manager)">
-    <remap from="~input/points" to="$(arg MASKED_POINTS)" />
+    <remap from="~input/points" to="$(arg INPUT_CLOUD)" />
     <rosparam>
       initial_pos: [0.6, 0, 0]
       initial_rot: [0, 0, 0]
@@ -107,8 +109,35 @@
   <node name="extract_indices"
         pkg="nodelet" type="nodelet" respawn="true"
         args="load jsk_pcl/ExtractIndices $(arg manager)">
-    <remap from="~input" to="$(arg MASKED_POINTS)" />
+    <remap from="~input" to="$(arg INPUT_CLOUD)" />
     <remap from="~indices" to="attention_clipper/output/point_indices" />
+    <rosparam>
+      keep_organized: true
+    </rosparam>
+  </node>
+
+
+  <!-- attention_clipper for ssd -->
+  <arg name="MASKED_POINTS" value="/extract_masked_indices/output" />
+  <node name="attention_clipper_for_ssd" 
+        pkg="nodelet" type="nodelet" respawn="true"
+        args="load jsk_pcl/AttentionClipper $(arg manager)">
+    <remap from="~input/points" to="$(arg MASKED_POINTS)" />
+    <rosparam>
+      initial_pos: [0.6, 0, 0]
+      initial_rot: [0, 0, 0]
+      dimension_x: 0.8
+      dimension_y: 1.0
+      dimension_z: 0.3
+      frame_id: WAIST
+    </rosparam >
+  </node>
+
+  <node name="extract_indices_for_ssd"
+        pkg="nodelet" type="nodelet" respawn="true"
+        args="load jsk_pcl/ExtractIndices $(arg manager)">
+    <remap from="~input" to="$(arg MASKED_POINTS)" />
+    <remap from="~indices" to="attention_clipper_for_ssd/output/point_indices" />
     <rosparam>
       keep_organized: true
     </rosparam>
@@ -135,7 +164,7 @@
         args="load jsk_pcl/OrganizedMultiPlaneSegmentation $(arg manager)"
         output="screen" respawn="true"
         machine="$(arg cloud_machine)">
-    <remap from="~input" to="$(arg inpoints)" />
+    <remap from="~input" to="extract_indices_for_ssd/output" />
     <rosparam>
       max_curvature: 0.01
       estimate_normal: true
