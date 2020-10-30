@@ -39,7 +39,6 @@
 (defun move_hand_out_of_camera ()
   (init-pose-20201001)
   (send *hironxjsk* :larm :move-end-pos #f(0 200 0))
-  (send-robot)
   (send *hironxjsk* :rarm :move-end-pos #f(0 -200 0))
   (send-robot)
   (send *hironxjsk* :rarm_joint5 :joint-angle 0)
@@ -237,3 +236,4 @@
 
 ;;chopsticks off-set
 ;;#f(-12.624 18.437 84.2388) ;;hand-pos - real-pos
+

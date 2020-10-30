@@ -8,6 +8,10 @@
 ;;init
 (ros::roseus "hiro_lunchbox")
 
+;;get catch-z coords
+(load "check_table_height.l")
+(format t "catch-z ~A~%" *catch-z*)
+
 ;;get food position and size
 (load "get_foods_info.l")
 (format t "name_list ~A~%" name_list)

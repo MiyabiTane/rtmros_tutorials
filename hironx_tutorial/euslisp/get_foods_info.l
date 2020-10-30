@@ -61,6 +61,28 @@
   (send-right-hand 2.0)
   )
 
+(defun init-pose-20201030 ()
+  (send *hironxjsk* :reset-manip-pose)
+  (send *hironxjsk* :larm_joint4 :joint-angle -35)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
+  (send *hironxjsk* :rarm :move-end-pos #f(50 0 150) :world)
+  (send *hironxjsk* :rarm_joint5 :joint-angle 100)
+  (send *hironxjsk* :rarm_joint3 :joint-angle 35)
+  (send-robot)
+   ;;look table
+  (send *hironxjsk* :head :look-at
+        (send (send (send *hironxjsk* :torso :end-coords :copy-worldcoords)
+                    :translate #f(750 0 0)) :worldpos))
+  (send *hironxjsk* :head :look-at #f(600 0 0))
+  (send-robot)
+  ;;open hand
+  (send *hironxjsk* :hand-angle-vector :lhand #f(20.449 -20.449 -20.449 20.449))
+  (send-left-hand 2.0)
+  (send *hironxjsk* :hand-angle-vector :rhand #f(20.449 -20.449 -20.449 20.449))
+  (send-right-hand 2.0)
+  )
+  
+
 ;;Only for draw
 (defun draw (*food-pos* *box-len* *box-wid* *box-hei*)
   (setq *target-food* (make-cube *box-wid* *box-len* *box-hei*))
