@@ -63,12 +63,12 @@ class TalkWith:
     def __init__(self):
         self.cb_flag = False
         self.voice = "" 
-        self.volume = 0.1
+        self.volume = 0.4
         self.str_candidate = ''
         self.like_list = []
         self.dislike_list = []
         self.want_to_eat = []
-        rospy.init_node('hiro_talk')
+        #rospy.init_node('hiro_talk')
         self.soundhandle = SoundClient(sound_action='robotsound_jp', sound_topic='robotsound_jp')
         rospy.sleep(1.0)
 
@@ -183,14 +183,16 @@ class TalkWith:
                     rospy.loginfo('Saying: %s' % s)
                     self.soundhandle.say(s, self.voice, self.volume)
                 elif "いいえ" in self.str_candidate:
-                    s = "Could you repeat the food's name please?"
+                    #s = "Could you repeat the food's name please?"
+                    s = "食べ物の名前をもう一度教えてください"
                     rospy.loginfo('Saying: %s' % s)
                     self.soundhandle.say(s, self.voice, self.volume)
                 else:
-                    s = "Could you repeat that please?"
+                    #s = "Could you repeat that please?"
+                    s = "もう一度おねがいします。"
                     rospy.loginfo('Saying: %s' % s)
                     self.soundhandle.say(s, self.voice, self.volume)
-            elif "ない" in self.str_candidate or "ありません" in self.str_candidate or "いいえ"in self.str_candidate:
+            elif "ありません" in self.str_candidate or "ない" in self.str_candidate or "いいえ"in self.str_candidate:
                 s = "了解しました。"
                 #s = "OK, I understand. Thank you."
                 rospy.loginfo('Saying: %s' % s)
@@ -205,9 +207,9 @@ class TalkWith:
         
         # 過去の記憶を使う
         # To Do 重複質問をなくす
-        rem = RememberInfo("owner_info.xlsx")
+        rem = RememberInfo("/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx")
         rem.update_info(self.like_list, self.dislike_list, self.want_to_eat)
-        rem = RememberInfo("owner_info.xlsx")
+        rem = RememberInfo("/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx")
         new_like, new_dislike, new_want = rem.get_past_info()
         print(new_like)
         print(new_dislike)
@@ -215,9 +217,10 @@ class TalkWith:
         return new_like, new_dislike, new_want
 
 #talk
-name_list = ["rolled_egg", "fried_chicken", "broccoli", "tomato", "octopus_wiener", "fried_chicken", "rolled_egg", "broccoli", "octopus_wiener", "tomato"]
-hiro_talk = TalkWith()
-hiro_talk.main_before_stuff(name_list)
+#if __name__=='__main__':
+#name_list = ["rolled_egg", "fried_chicken", "broccoli", "tomato", "octopus_wiener", "fried_chicken", "rolled_egg", "broccoli", "octopus_wiener", "tomato"]
+#    hiro_talk = TalkWith()
+#    hiro_talk.main_before_stuff(name_list)
 
 """
 #xlsx

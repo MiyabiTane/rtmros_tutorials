@@ -1,8 +1,7 @@
 #!/usr/bin/env roseus
 
-
-(ros::roseus-add-msgs "jsk_recognition_msgs")
 ;;(ros::roseus "hiro_lunchbox")
+(ros::roseus-add-msgs "jsk_recognition_msgs")
 (ros::advertise "/lunchbox_info" jsk_recognition_msgs::Rect 1)
 (ros::advertise "/food_size_info" geometry_msgs::PoseArray 1)
 (ros::advertise "/food_name_info" jsk_recognition_msgs::LabelArray 1)
@@ -11,15 +10,19 @@
 (setq *sub-flag-topic* "/calc_finish_flag")
 (ros::roseus-add-msgs "std_msgs")
 
-(setq pub_box_msg (instance jsk_recognition_msgs::Rect :init))
-(send pub_box_msg :x *front*)
-(send pub_box_msg :y *left*)
-(send pub_box_msg :width *length*)
-(send pub_box_msg :height *width*)
-
 ;;input examples
 ;;(setq box_list (list (list 4 2 2) (list 4 4 4) (list 4 4 4) (list 3 3 3) (list 2 2 3.5) (list 4 4 4) (list 4 2 2) (list 4 4 4) (list 2 2 3.5) (list 3 3 3)))
 ;;(setq name_list (list "rolled_egg" "fried_chicken" "broccoli" "tomato" "octopus_wiener" "fried_chicken" "rolled_egg" "broccoli" "octopus_wiener" "tomato"))
+;;(setq *front* 1)
+;;(setq *left* 1)
+;;(setq *length* 10)
+;;(setq *width* 20.6)
+
+(setq pub_box_msg (instance jsk_recognition_msgs::Rect :init))
+(send pub_box_msg :x (round *front*))
+(send pub_box_msg :y (round *left*))
+(send pub_box_msg :width (round *length*))
+(send pub_box_msg :height (round *width*))
 
 (setq pub_food_msg (instance geometry_msgs::PoseArray :init))
 (dotimes (i (length box_list))
@@ -44,10 +47,11 @@
       (setq finish_flag t)
     )
   )
-  
+
+(format t "info publish~%")
 (ros::subscribe *sub-flag-topic* std_msgs::Int16 #'flag_cb)
 (setq finish_flag nil)
-(until (finish_flag)
+(until finish_flag
        (ros::publish "/lunchbox_info" pub_box_msg)
        (ros::publish "/food_size_info" pub_food_msg)
        (ros::publish "/food_name_info" pub_name_msg)
