@@ -15,74 +15,6 @@
   (setq *tfl* (instance ros::transform-listener :init)))
 
 
-(defun send-robot ()
-  (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 2000)
-  (send *ri* :wait-interpolation)
-  )
-
-(defun send-right-hand (sleep-time)
-  (send *ri* :hand-angle-vector :rhand (send *hironxjsk* :hand-angle-vector :rhand) 2000)
-  (ros::duration-sleep sleep-time)
-  )
-
-(defun send-left-hand (sleep-time)
-  (send *ri* :hand-angle-vector :lhand (send *hironxjsk* :hand-angle-vector :lhand) 2000)
-  (ros::duration-sleep sleep-time)
-  )
-
-;;move hand out of camera view
-(defun move_hand_out_of_camera ()
-  (init-pose-20201001)
-  (send *hironxjsk* :larm :move-end-pos #f(0 200 0))
-  (send-robot)
-  (send *hironxjsk* :rarm :move-end-pos #f(0 -200 0))
-  (send-robot)
-  (send *hironxjsk* :rarm_joint5 :joint-angle 0)
-  (send-robot)
-  )
-
-(defun init-pose-20201001 ()
-  (send *hironxjsk* :reset-manip-pose)
-  (send *hironxjsk* :larm_joint4 :joint-angle -35)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
-  (send *hironxjsk* :rarm_joint1 :joint-angle 20) 
-  (send *hironxjsk* :rarm :move-end-pos #f(150 0 300))
-  (send-robot)
-  ;;look table
-  (send *hironxjsk* :head :look-at
-        (send (send (send *hironxjsk* :torso :end-coords :copy-worldcoords)
-                    :translate #f(750 0 0)) :worldpos))
-  (send *hironxjsk* :head :look-at #f(600 0 0))
-  (send-robot)
-  ;;open hand
-  (send *hironxjsk* :hand-angle-vector :lhand #f(20.449 -20.449 -20.449 20.449))
-  (send-left-hand 2.0)
-  (send *hironxjsk* :hand-angle-vector :rhand #f(20.449 -20.449 -20.449 20.449))
-  (send-right-hand 2.0)
-  )
-
-(defun init-pose-20201030 ()
-  (send *hironxjsk* :reset-manip-pose)
-  (send *hironxjsk* :larm_joint4 :joint-angle -35)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
-  (send *hironxjsk* :rarm :move-end-pos #f(50 0 150) :world)
-  (send *hironxjsk* :rarm_joint5 :joint-angle 100)
-  (send *hironxjsk* :rarm_joint3 :joint-angle 35)
-  (send-robot)
-   ;;look table
-  (send *hironxjsk* :head :look-at
-        (send (send (send *hironxjsk* :torso :end-coords :copy-worldcoords)
-                    :translate #f(750 0 0)) :worldpos))
-  (send *hironxjsk* :head :look-at #f(600 0 0))
-  (send-robot)
-  ;;open hand
-  (send *hironxjsk* :hand-angle-vector :lhand #f(20.449 -20.449 -20.449 20.449))
-  (send-left-hand 2.0)
-  (send *hironxjsk* :hand-angle-vector :rhand #f(20.449 -20.449 -20.449 20.449))
-  (send-right-hand 2.0)
-  )
-  
-
 ;;Only for draw
 (defun draw (*food-pos* *box-len* *box-wid* *box-hei*)
   (setq *target-food* (make-cube *box-wid* *box-len* *box-hei*))
@@ -140,6 +72,7 @@
   )
 
 (defun main_loop ()
+  (ros::duration-sleep 3)
   (while (and (< (length b_cb_lst) 2) (< (length n_cb_lst) 2))
     ;;(format t "Called~%")
     (ros::spin-once)
@@ -148,12 +81,13 @@
   (sync_info)
   )
 
-;;(look-table) ;;for simulation
-;;(init-pose-20201001)
-(move_hand_out_of_camera)
-(setq b_cb_lst '())
-(setq n_cb_lst '())
-
-(ros::subscribe "/edgetpu_boxes_synchronizer/pub_00" jsk_recognition_msgs::ClassificationResult #'get_name_cb)
-(ros::subscribe "/edgetpu_boxes_synchronizer/pub_01" jsk_recognition_msgs::BoundingBoxArray #'get_box_cb)
-(main_loop)
+(defun get_foods_info_main ()
+  (format t "- - - GET FOODS INFO - - -~%")
+  (move_hand_out_of_camera)
+  (setq b_cb_lst '())
+  (setq n_cb_lst '())
+  
+  (ros::subscribe "/edgetpu_boxes_synchronizer/pub_00" jsk_recognition_msgs::ClassificationResult #'get_name_cb)
+  (ros::subscribe "/edgetpu_boxes_synchronizer/pub_01" jsk_recognition_msgs::BoundingBoxArray #'get_box_cb)
+  (main_loop)
+  )

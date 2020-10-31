@@ -8,29 +8,37 @@
 ;;init
 (ros::roseus "hiro_lunchbox")
 
+;;To Do load all file at first
+
 ;;get catch-z coords
 (load "check_table_height.l")
+(check_table_height_main)
 (format t "catch-z ~A~%" *catch-z*)
 
 ;;get food position and size
 (load "get_foods_info.l")
+(get_foods_info_main)
 (format t "name_list ~A~%" name_list)
 (format t "pos_list ~A~%" pos_list)
 (format t "box_list ~A~%" box_list)
 
 ;;get lunchbox position and size
 (load "recognize_lunchbox.l")
+(recognize_lunchbox_main)
 (format t "left ~A front ~A~%" *left* *front*)
 (format t "size GA width ~A length ~A~%" *length* *width*)
 
 ;;publish food info and lunchbox info
 (load "info_publisher.l")
+(info_publisher_main)
 
 ;;Calculate stuff posiion using stuff_by_GA.py
 
 ;;subscribe result of GA caluculation
 (load "result_subscriber.l")
+(result_subscriber_main)
 (format t "place_list is ~A~%" place_list)
 
 ;;catch and place foods
 (load "catch_and_place.l")
+(catch_and_place_main)

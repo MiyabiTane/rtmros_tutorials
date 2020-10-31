@@ -31,5 +31,8 @@
   (format t "place_list is ~A~%" place_list)
   )
 
-(ros::subscribe *stuff-sub-topic* geometry_msgs::PoseArray #'stuff_cb)
-(main)
+(defun result_subscriber_main ()
+  (format t " - - -RESULT SUBSCRIBER - - -~%")
+  (ros::subscribe *stuff-sub-topic* geometry_msgs::PoseArray #'stuff_cb)
+  (main)
+  )
