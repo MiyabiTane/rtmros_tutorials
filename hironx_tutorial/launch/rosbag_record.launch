@@ -1,0 +1,34 @@
+<launch>
+  <arg name="rosbag" doc="rosbag file path" />
+  <arg name="compress" default="false" doc="whether compress rosbag or not." />
+
+  <arg if="$(arg compress)" name="compress_flag" value="--bz2" />
+  <arg unless="$(arg compress)" name="compress_flag" value="" />
+
+  <node name="rosbag_record" pkg="rosbag" type="record"
+	args="-q $(arg compress_flag) -O $(arg rosbag) -b 0
+	      /rosout
+	      /tf
+	      /tf_static
+	      /joint_status
+	      /head_camera/rgb/image_raw/compressed
+	      /head_camera/depth/camera_info
+	      /head_camera/depth/image_raw/compressedDepth
+	      /head_camera/depth_registered/points
+	      /head_camera/depth_registered/camera_info
+	      /head_camera/depth_registered/image_raw
+	      /head_camera/rgb/image_rect_color
+	      /head_camera/rgb/image_raw
+	      /head_camera/rgb/camera_info
+	      /audio
+	      /is_speeching 
+	      /lhsensor  
+	      /odom
+	      /respeaker_node/parameter_descriptions
+	      /rhsensor
+	      /robotsound/status                                 
+              /robotsound_jp/status
+	      /voice_text/parameter_descriptions                                                   
+              /voice_text/parameter_updates"
+	output="screen" />  
+</launch>
