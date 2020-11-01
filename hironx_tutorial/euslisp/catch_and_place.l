@@ -30,8 +30,9 @@
 (defun place-food (pos)
   ;;same pose
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
-  (setq pos (v+ pos *tong-offset*)) ;;tong offset
+  (setq pos (scale -1 pos)) 
   (setq pos (v+ pos (float-vector *front* *left* 0))) ;;*coords*<-lunchbox pos
+  (setq pos (v+ pos *tong-offset*)) ;;tong offset
   (setq pos (v+ pos (float-vector 0 0 (- *catch-z* (elt pos 2))))) ;;set z *catch-z*
   (setq *move* (v- pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
