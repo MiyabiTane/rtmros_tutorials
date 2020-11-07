@@ -16,8 +16,8 @@
   (init-pose-20201030)
   (open-hand)
   (setq *hiro-pos* (send (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords) :pos))
-  (setq move-z (- (+ *G-z* 5) (elt *hiro-pos* 2)))
-  (send *hironxjsk* :rarm :move-end-pos (float-vector 0 -150 move-z) :world)
+  (setq move-z (- (+ *G-z* 105) (elt *hiro-pos* 2)))
+  (send *hironxjsk* :rarm :move-end-pos (float-vector 0 -170 move-z) :world)
   (send-robot)
   (setq moved_count 0)
   (setq loop_flag t)
@@ -46,5 +46,6 @@
   (format t "- - - CHECK TABLE HEIGHT - - -~%")
   (ros::subscribe "/rhsensor" geometry_msgs::WrenchStamped #'rwrench_cb)
   (get-z-coords)
+  (init-pose-20201030)
   )
 

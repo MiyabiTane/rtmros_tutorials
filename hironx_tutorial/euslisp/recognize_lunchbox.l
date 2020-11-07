@@ -177,6 +177,8 @@
   (move_to)
   (get_range)
   (box_vis)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 20))
+  (send-robot)
   (init-pose-20201030)
   )
 
