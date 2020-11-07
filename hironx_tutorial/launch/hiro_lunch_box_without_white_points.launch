@@ -5,6 +5,10 @@
   <arg name="gazebo" default="true" />
   <arg name="launch_rviz" default="true" />
 
+  <!--
+  <arg name="model" default="$(find hironx_tutorial)/models/HIRONXJSK.gazebo.xacro" />
+  <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model)'" />
+  -->
  
   <!-- add for screenpoint -->
   <arg name="inpoints" default="/head_camera/depth_registered/points"/>
@@ -57,7 +61,6 @@
       clip: false
     </rosparam>
   </node>
-  
   <!-- mask -> point indices -> mask -->
   <!--
   <node name="sample_manager"
@@ -119,7 +122,7 @@
 
   <!-- attention_clipper for ssd -->
   <arg name="MASKED_POINTS" value="/extract_masked_indices/output" />
-  <node name="attention_clipper_for_ssd" 
+  <node name="attention_clipper_for_ssd"
         pkg="nodelet" type="nodelet" respawn="true"
         args="load jsk_pcl/AttentionClipper $(arg manager)">
     <remap from="~input/points" to="$(arg MASKED_POINTS)" />
@@ -156,7 +159,7 @@
     <arg name="launch_openni" value="false" />
     <arg name="launch_tracking" value="false" />
     <arg name="launch_rviz" value="false" />
-    <arg name="publish_tf" value="true" />    
+    <arg name="publish_tf" value="true" />
   </include>
 
   <!-- ssd -->
@@ -168,7 +171,7 @@
     <rosparam>
       max_curvature: 0.01
       estimate_normal: true
-      ransac_refine_outlier_distance_threshold: 0.001 
+      ransac_refine_outlier_distance_threshold: 0.001
     </rosparam>
   </node>
   
@@ -230,7 +233,55 @@
       min_size: -1
       use_pca: true
     </rosparam>
+    </node>
+
+  <!-- point -> maskd image -->
+  <!--
+  <node name="plane_extraction_imgpro" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/MultiPlaneExtraction $(arg manager)"
+        output="screen" respawn="true"
+        machine="$(arg cloud_machine)">
+    <remap from="~input" to="extract_indices/output" />
+    <remap from="~indices" to="multi_plane_estimate_ssd/output_refined" />
+    <remap from="~input_polygons" to="multi_plane_estimate_ssd/output_refined_polygon" />
+    <remap from="~input_coefficients" to="multi_plane_estimate_ssd/output_refined_coefficients" />
+    <rosparam subst_value="true">
+      use_async: true
+      max_queue_size: 1000
+      use_sensor_frame: true
+      keep_organized: true
+      sensor_frame: $(arg camera_frame_id)
+      min_height: 0.001
+    </rosparam>
+    </node>
+    -->
+    
+  <node name="pointcloud_to_point_indices"
+  	pkg="jsk_pcl_ros_utils" type="pointcloud_to_point_indices">
+    <remap from="~input" to="/plane_extraction_ssd/output" />
   </node>
+
+  <node name="point_indices_to_mask_image"
+	pkg="jsk_pcl_ros_utils" type="point_indices_to_mask_image">
+    <remap from="~input" to="/pointcloud_to_point_indices/output" />
+    <rosparam>
+      static_image_size: true
+      height: 480
+      width: 640
+    </rosparam>	
+  </node>
+
+  <node name="apply_mask_image_2"
+        pkg="nodelet" type="nodelet"
+        args="standalone jsk_perception/ApplyMaskImage">
+    <remap from="~input" to="/head_camera/rgb/image_raw" />
+    <remap from="~input/mask" to="/point_indices_to_mask_image/output" />
+    <rosparam>
+      approximate_sync: true
+      queue_size: 100
+    </rosparam>
+  </node>
+
 
   <!-- approximate sync for euslisp node -->
   <node name="edgetpu_boxes_synchronizer" pkg="jsk_topic_tools" type="synchronize_republish.py"
