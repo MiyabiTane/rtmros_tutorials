@@ -37,7 +37,7 @@
   (send *hironxjsk* :hand-angle-vector :lhand #f(-10.499 10.499 10.499 -10.499))
   (send-left-hand 1.0)
   ;;length of chopsticks
-  (setq *off-set* (float-vector 0 (* -1 (/ (elt size 1) 4)) 150)) ;;To Do x,y -> use box size
+  (setq *off-set* (float-vector 0 (* -1 (/ (elt size 1) 4)) 150)) 
   (setq *start-pos* (v+ *off-set* *coords*))
   (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
   (setq *move* (v- *start-pos* (send *hiro-pose* :pos))) 
@@ -84,7 +84,7 @@
     (send-robot)
     )
   (setq hiro-hand-pos (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
-  (setq *edge* (v+ hiro-hand-pos #f(0 0 -150))) ;;To Do
+  (setq *edge* (v+ hiro-hand-pos #f(0 0 -150))) 
   (format t "edge is ~A~%" *edge*)
   (send *hironxjsk* :larm :move-end-pos (scale -3 move-vector))
   (send-robot)
@@ -110,7 +110,7 @@
     (send-robot)
     )
   (setq hiro-hand-pos (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
-  (setq *edge* (v+ hiro-hand-pos #f(-12.624 18.437 84.2388))) ;;To Do
+  (setq *edge* (v+ hiro-hand-pos #f(-12.624 18.437 84.2388))) 
   (format t "edge is ~A~%" *edge*)
   (send *hironxjsk* :larm :move-end-pos (scale -2 move-vector))
   (send-robot)

@@ -4,11 +4,16 @@
   
   <arg name="gazebo" default="true" />
   <arg name="launch_rviz" default="true" />
+  <arg name="use_rosbag" default="false" />
 
-  <!--
-  <arg name="model" default="$(find hironx_tutorial)/models/HIRONXJSK.gazebo.xacro" />
-  <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model)'" />
-  -->
+  <!-- Spawn gazebo robot model -->
+  <group if="$(arg use_rosbag)">
+    <!--
+    <arg name="model" default="$(find hironx_tutorial)/models/HIRONXJSK.gazebo.xacro" />
+    <param name="robot_description" command="$(find xacro)/xacro '$(arg model)'" />
+    -->
+    <param name="robot_description" textfile="$(find hrpsys_ros_bridge_tutorials)/models/HIRONXJSK_SENSORS.urdf" />
+  </group>
  
   <!-- add for screenpoint -->
   <arg name="inpoints" default="/head_camera/depth_registered/points"/>
@@ -61,6 +66,7 @@
       clip: false
     </rosparam>
   </node>
+  
   <!-- mask -> point indices -> mask -->
   <!--
   <node name="sample_manager"
@@ -233,7 +239,20 @@
       min_size: -1
       use_pca: true
     </rosparam>
-    </node>
+  </node>
+
+  <!-- 3Dpoint->2Dpoint -->
+  <node name="xyz_to_screenpoint"
+        pkg="hironx_tutorial" type="xyz_to_screenpoint.py"
+        output="screen" respawn="true">
+    <remap from="~input/camera_info" to="/head_camera/rgb/camera_info"/>
+  </node>
+
+  <!-- get food rects by image procssing -->
+  <node name="get_food_size"
+        pkg="hironx_tutorial" type="get_food_size.py"
+        output="screen" respawn="true">
+  </node>
 
   <!-- point -> maskd image -->
   <!--
@@ -255,7 +274,8 @@
     </rosparam>
     </node>
     -->
-    
+
+  <!--
   <node name="pointcloud_to_point_indices"
   	pkg="jsk_pcl_ros_utils" type="pointcloud_to_point_indices">
     <remap from="~input" to="/plane_extraction_ssd/output" />
@@ -271,7 +291,7 @@
     </rosparam>	
   </node>
 
-  <node name="apply_mask_image_2"
+  <node name="apply_mask_image_rgb"
         pkg="nodelet" type="nodelet"
         args="standalone jsk_perception/ApplyMaskImage">
     <remap from="~input" to="/head_camera/rgb/image_raw" />
@@ -280,7 +300,8 @@
       approximate_sync: true
       queue_size: 100
     </rosparam>
-  </node>
+    </node>
+    -->
 
 
   <!-- approximate sync for euslisp node -->
@@ -288,8 +309,9 @@
         output="screen" respawn="true">
     <rosparam subst_value="true">
       topics:
-        - /edgetpu_object_detector/output/class
-        - segmentation_decomposer_ssd/boxes
+      - /edgetpu_object_detector/output/class
+      - segmentation_decomposer_ssd/boxes
+      - /edgetpu_object_detector/output/rects
       approximate_sync: true
       slop: 0.01
       queue_size: 1000

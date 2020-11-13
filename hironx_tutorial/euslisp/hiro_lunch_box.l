@@ -78,13 +78,6 @@
 
 (look-73b2-table)
 
-;;get food position and size
-(load "get_foods_info.l")
-(get_foods_info_main)
-(format t "name_list ~A~%" name_list)
-(format t "pos_list ~A~%" pos_list)
-(format t "box_list ~A~%" box_list)
-
 ;;get lunchbox position and size
 (load "recognize_lunchbox.l")
 (recognize_lunchbox_main)
@@ -95,6 +88,13 @@
 (load "check_table_height.l")
 (check_table_height_main)
 (format t "catch-z ~A~%" *catch-z*)
+
+;;get food position and size
+(load "get_foods_info.l")
+(get_foods_info_main)
+(format t "name_list ~A~%" name_list)
+(format t "pos_list ~A~%" pos_list)
+(format t "box_list ~A~%" box_list)
 
 ;;publish food info and lunchbox info
 (load "info_publisher.l")
