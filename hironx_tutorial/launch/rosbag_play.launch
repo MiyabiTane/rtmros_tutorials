@@ -1,0 +1,46 @@
+<launch>
+  <arg name="rosbag" />
+  <arg name="manager" default="rosbag_play_nodelet_manager" />
+  <arg name="launch_nodelet_manager" default="true" />
+  <arg name="loop" default="true" />
+  <arg name="gui" default="false" />
+  <arg name="loop_flag" value="--loop" if="$(arg loop)" />
+  <arg name="loop_flag" value="" unless="$(arg loop)" />
+
+  <arg name="IMAGE_RAW" value="/head_camera/rgb/image_raw" />
+  <arg name="RGB_IMAGE" value="/head_camera/rgb/image_rect_color" />
+  <arg name="DEPTH_RAW" value="/head_camera/depth/image_raw" />
+  <arg name="DEPTH_IMAGE" value="/head_camera/depth_registered/sw_registered/image_rect" />
+  <arg name="RGB_CAMERA_INFO" value="/head_camera/rgb/camera_info" />
+  <arg name="" />
+
+  <param name="use_sim_time" value="true" />
+
+  <!-- spawn robot model -->
+  <param name="robot_description" textfile="$(find hrpsys_ros_bridge_tutorials)/models/HIRONXJSK_SENSORS.urdf" />
+
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" output="screen" />
+
+  <!-- decompress -->
+  <node name="raw_decompress" pkg="image_transport" type="republish"
+        args="compressed in:=$(arg IMAGE_RAW)/compressed out:=$(arg IMAGE_RAW)" />
+  <node name="rgb_decompress" pkg="image_transport" type="republish"
+        args="compressed in:=$(arg RGB_IMAGE)/compressed out:=$(arg RGB_IMAGE)" />
+  <node name="depth_decompress" pkg="image_transport" type="republish"
+        args="compressedDepth in:=$(arg DEPTH_RAW)/compressedDepth out:=$(arg DEPTH_RAW)" />
+  <node pkg="nodelet" type="nodelet" name="point_cloud_xyzrgb"
+        args="load depth_image_proc/point_cloud_xyzrgb $(arg manager)" output="screen" >
+    <remap from="rgb/camera_info" to="$(arg RGB_CAMERA_INFO)" />
+    <remap from="rgb/image_rect_color" to="$(arg RGB_IMAGE)" />
+    <remap from="depth_registered/image_rect" to="$(arg DEPTH_IMAGE)" />
+    <remap from="depth_registered/points" to="/head_camera/depth_registered/points" />
+    <rosparam>
+      queue_size: 100
+    </rosparam>
+  </node>
+
+  <!-- rosbag player -->
+  <node pkg="rosbag" type="play" name="rosbag_play"
+        args="$(arg rosbag) $(arg loop_flag) --clock" output="screen" />
+  
+</launch>

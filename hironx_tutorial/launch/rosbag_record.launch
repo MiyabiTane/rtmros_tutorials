@@ -12,13 +12,12 @@
 	      /tf_static
 	      /joint_status
 	      /head_camera/rgb/image_raw/compressed
-	      /head_camera/depth/camera_info
 	      /head_camera/depth/image_raw/compressedDepth
-	      /head_camera/depth_registered/points
+	      /head_camera/depth_registered/sw_registered/image_rect
+	      /head_camera/depth/image_rect  
 	      /head_camera/depth_registered/camera_info
 	      /head_camera/depth_registered/image_raw
-	      /head_camera/rgb/image_rect_color
-	      /head_camera/rgb/image_raw
+	      /head_camera/rgb/image_rect_color/compressed
 	      /head_camera/rgb/camera_info
 	      /audio
 	      /is_speeching 
