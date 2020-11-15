@@ -169,11 +169,8 @@
 
 (defun main()
   (format t "MAIN CALLED~%")
-  ;;(move_hand_out_of_camera)
-  (setq *coords* #f(0 -100 0))
-  (while (< (elt *coords* 1) 0)
-    (find-box)
-    )
+  (move_hand_out_of_camera)
+  (find-box)
   (move_to)
   (get_range)
   (box_vis)

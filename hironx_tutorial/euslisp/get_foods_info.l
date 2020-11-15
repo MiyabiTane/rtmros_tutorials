@@ -3,10 +3,10 @@
 ;;Rostopic
 (ros::load-ros-package "jsk_recognition_msgs")
 (setq *camera-frame* "head_camera_rgb_optical_frame")
-(ros::advertise "/coral_rects_info" jsk_recognition_msgs::RectArray)
-(ros::rate 1)
-
+(ros::advertise "/coral_rects_info" jsk_recognition_msgs::RectArray 1)
 (setq *pub-topic* "/xyz_to_screenpoint/input")
+(ros::advertise *pub-topic* geometry_msgs::PointStamped 1)
+(ros::rate 1)
 
 ;;keep info
 (setq name_list '())
@@ -29,11 +29,12 @@
 
 ;;use xyz_to_screenpoint
 (defun publish-3Dcoords (x y z)
+  (format t "publish 3D coords ~A ~A ~A~%" x y z)
   (setq pub_msg (instance geometry_msgs::PointStamped :init))
-  (send pub_msg :x x)
-  (send pub_msg :y y)
-  (send pub_msg :z z)
-  (ros::publish *pub-topic* pub-msg)
+  (send (send pub_msg :point) :x x)
+  (send (send pub_msg :point) :y y)
+  (send (send pub_msg :point) :z z)
+  ;;(ros::publish *pub-topic* pub_msg)
   )
   
 ;;ほぼ同じtimeStampedの情報を取ってくる
@@ -55,11 +56,12 @@
   )
 
 (defun imgpro_cb (msg)
-  (setq got_rects (send msg :rects))
-  (format t "Called imgpro result")
+  (setq got_rects_list (send msg :rects))
+  (format t "Called imgpro result~%")
   )
 
 (defun pub_sub_rects (pub_msg)
+  (format t "start image processing~%")
   (setq got_rects_list '())
   (setq pub_rects_msg (instance jsk_recognition_msgs::RectArray :init))
   (dotimes (i (length (send pub_msg :rects)))
@@ -72,8 +74,8 @@
     (send pub_rects_msg :rects (append (send pub_rects_msg :rects) (list rect_msg)))
     )
   (ros::subscribe "/result_of_imageprocessing" jsk_recognition_msgs::RectArray #'imgpro_cb)
-  (ros::publish "/coral_rects_info" pub_rects_msg)
   (until got_rects_list
+	 (ros::publish "/coral_rects_info" pub_rects_msg)
 	 (ros::spin-once)
 	 (ros::sleep)
 	 )  
@@ -91,23 +93,26 @@
 	(format t "time ~A~%" r_time)
 	(when (and (and (= (elt b_time 0) (elt c_time 0)) (= (elt b_time 0) (elt r_time 0)))
 		   (and (< (abs (- (elt b_time 1) (elt c_time 1))) 10000000)
-			(< (abs (- (elt b_time 1) (elt r_timｋe 1))) 10000000)))
+			(< (abs (- (elt b_time 1) (elt r_time 1))) 10000000)))
+	  (format t "FIND~%")
 	  (setq box_msg (elt b_cb_lst i))
 	  (setq name_msg (elt n_cb_lst j))
-	  (pub_sub_rects (elt r_cb_lst k))
+	  (setq rect_msg (elt r_cb_lst k))
 	  ))))
+  (ros::unsubscribe "/edgetpu_boxes_synchronizer/pub_00")
+  (ros::unsubscribe "/edgetpu_boxes_synchronizer/pub_01")
+  (ros::unsubscribe "/edgetpu_boxes_synchronizer/pub_02")
+  (pub_sub_rects rect_msg)
   )
 
 (defun lbox_size_cb (msg)
-  (if (= lbox_top nil)
-      (setq lbox_top (send (send msg :point) :y))
-    (if (= lbox_bottom nil)
-	(progn
-	  (setq lbox_bottom (send msg :point) :y)
-	  (setq lbox_length (- lbox_top lbox_bottom))))
-    )
+  (if lbox_top
+      (progn
+	(setq lbox_bottom (send (send msg :point) :y))
+	(setq lbox_length (- lbox_top lbox_bottom)))
+    (setq lbox_top (send (send msg :point) :y)))
   )
-	  
+  
 
 (defun get_list ()
   ;;結果を格納していく
@@ -130,22 +135,23 @@
     ;;(format t "size ~A~%" size_list)
     (setq box_list (list-insert size_list (length box_list) box_list))
     )
-  (ros::unsubscribe "/edgetpu_boxes_synchronizer/pub_00")
-  (ros::unsubscribe "/edgetpu_boxes_synchronizer/pub_01")
-  (ros::unsubscribe "/edgetpu_boxes_synchronizer/pub_02")
   )
   
 
 (defun main_loop ()
-  (publish-3Dcoords back right *height*)
+  (publish-3Dcoords back right *G-z*)
   (ros::subscribe "/xyz_to_screenpoint/output" geometry_msgs::PointStamped #'lbox_size_cb)
   (until lbox_top
-	 (ros::spin)
+	 (ros::publish *pub-topic* pub_msg)
+	 (ros::spin-once)
 	 (ros::sleep))
-  (publish-3Dcoords front right *height*)
+  (format t "lbox_top ~A~%" lbox_top)
+  (publish-3Dcoords *front* right *G-z*)
   (until lbox_bottom
-	 (ros::spin)
+	 (ros::publish *pub-topic* pub_msg)
+	 (ros::spin-once)
 	 (ros::sleep))
+  (format t "lbox_bottom ~A~%" lbox_bottom)
   (ros::unsubscribe "/xyz_to_screenpoint/output")
   (ros::subscribe "/edgetpu_boxes_synchronizer/pub_00" jsk_recognition_msgs::ClassificationResult #'get_name_cb)
   (ros::subscribe "/edgetpu_boxes_synchronizer/pub_01" jsk_recognition_msgs::BoundingBoxArray #'get_box_cb)

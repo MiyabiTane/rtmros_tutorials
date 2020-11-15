@@ -37,12 +37,15 @@ class ImageProcessing:
 
     def subscinfo(self):
         img_msg = rospy.wait_for_message("/head_camera/rgb/image_raw", Image)
-        coral_msg = rospy.wait_for_message("/edgetpu_object_detector/output/rects", RectArray)
-        # coral_msg = rospy.wait_for_message("/coral_rects_info", RectArray)
+        # coral_msg = rospy.wait_for_message("/edgetpu_object_detector/output/rects", RectArray)
+        coral_msg = rospy.wait_for_message("/coral_rects_info", RectArray)
         self.image_cb(img_msg)
         self.coral_cb(coral_msg)
 
+
     def get_foods_rects(self):
+        if not self.rects_info:
+            self.subscinfo()
         # self.cv_image = cv2.imread("/home/tork/Desktop/images/output_color.png")
         black_img = deepcopy(self.cv_image)
         # draw white plate black
@@ -51,7 +54,8 @@ class ImageProcessing:
         # draw others black
         _thre, bw_img = cv2.threshold(img_gray, 1, 255, cv2.THRESH_BINARY)
         # get contours
-        contours, _hierarchy = cv2.findContours(bw_img ,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # if opencv version is latest, _, contours, _hierarchy -> contours, _hierarchy
+        _, contours, _hierarchy = cv2.findContours(bw_img ,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         boxes_cand = []
         max_foods_size = self.rects_info[0].width * self.rects_info[0].height * 2
         for cnt in contours:
@@ -94,7 +98,7 @@ class ImageProcessing:
             pub_msgs.rects.append(pub_msg)
         # visualize result
         # cv2.imwrite("/home/tork/Desktop/images/output.png", self.output_img)
-        pub = rospy.Publisher("/result_of_imageproccessing", RectArray, queue_size=1)
+        pub = rospy.Publisher("/result_of_imageprocessing", RectArray, queue_size=1)
         while not rospy.is_shutdown():
             pub.publish(pub_msgs)
             rospy.sleep(0.1)
