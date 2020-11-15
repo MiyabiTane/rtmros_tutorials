@@ -8,10 +8,20 @@
 ;;init
 (ros::roseus "hiro_lunchbox")
 
-;;;;def some poses
+;;use tf
+(unless (boundp '*tfl*)
+  (setq *tfl* (instance ros::transform-listener :init)))
+
+;;def some poses
+(setq stop-move-flag nil)
 (defun send-robot ()
-  (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 2000)
-  (send *ri* :wait-interpolation)
+  (if (< (elt (send (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords) :pos) 2) -10.0)
+      (progn
+	(format t "DANGER!!~%")
+	(setq stop-move-flag t))
+    (progn
+      (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 2000)
+      (send *ri* :wait-interpolation)))
   )
 
 (defun send-right-hand (sleep-time)
@@ -77,16 +87,28 @@
 ;;To Do load all file at first
 
 (look-73b2-table)
+(init-pose-20201030)
 
 ;;get lunchbox position and size
 (load "recognize_lunchbox.l")
-(recognize_lunchbox_main)
+;;(recognize_lunchbox_main)
+(setq *G-z* -40.5341)
+(setq right -1.79236)
+(setq back 504.795)
+(setq *left* 71.7166)
+(setq *front* 400.406)
+(setq *length* 125.673)
+(setq *width* 70.3547)
+
+(format t "G-z ~A~%" *G-z*)
+(format t "right ~A back ~A~%" right back)
 (format t "left ~A front ~A~%" *left* *front*)
 (format t "size GA width ~A length ~A~%" *length* *width*)
 
 ;;get catch-z coords
 (load "check_table_height.l")
-(check_table_height_main)
+;;(check_table_height_main)
+(setq *catch-z* -15.5801)
 (format t "catch-z ~A~%" *catch-z*)
 
 ;;get food position and size
