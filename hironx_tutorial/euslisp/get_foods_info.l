@@ -29,14 +29,16 @@
 
 ;;use xyz_to_screenpoint
 (defun publish-3Dcoords (x y z)
-  (format t "publish 3D coords ~A ~A ~A~%" x y z)
   (setq pub_msg (instance geometry_msgs::PointStamped :init))
-  (send (send pub_msg :point) :x x)
-  (send (send pub_msg :point) :y y)
-  (send (send pub_msg :point) :z z)
-  ;;(ros::publish *pub-topic* pub_msg)
+  (setq coords (make-coords :pos (float-vector x y z)))
+  (setq pub-coords (send (send *tfl* :lookup-transform "WAIST" "head_camera_rgb_optical_frame" (ros::time 0))
+	:transform coords))
+  (send pub_msg :x (elt pub-coords 0))
+  (send pub_msg :y (elt pub-coords 1))
+  (send pub_msg :z (elt pub-coords 2))
+  (ros::publish *pub-topic* pub-msg)
   )
-  
+
 ;;ほぼ同じtimeStampedの情報を取ってくる
 (defun get_box_cb (msg)
   (setq b_cb_lst (append b_cb_lst (list msg)))
