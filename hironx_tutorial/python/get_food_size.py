@@ -8,6 +8,7 @@ from cv_bridge import CvBridge
 from copy import deepcopy
 import cv2
 import numpy as np
+import math
 TH = 200
 
 class ImageProcessing:
@@ -22,8 +23,9 @@ class ImageProcessing:
         self.bridge = CvBridge()
         
     def image_cb(self, msg):
-        print("Img Called")  
-        self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8") 
+        print("Img Called")
+        self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        # cv2.imwrite("/home/tanemoto/Desktop/images/output1118_original_3.png", self.cv_image)
        
     def coral_cb(self, msg):
         print("Coral Called")
@@ -36,12 +38,10 @@ class ImageProcessing:
             cv2.rectangle(self.output_img, (rect.x, rect.y), (rect.x + rect.width, rect.y + rect.height), (255,0,0))
 
     def subscinfo(self):
-        img_msg = rospy.wait_for_message("/head_camera/rgb/image_raw", Image)
-        # coral_msg = rospy.wait_for_message("/edgetpu_object_detector/output/rects", RectArray)
         coral_msg = rospy.wait_for_message("/coral_rects_info", RectArray)
+        img_msg = rospy.wait_for_message("/head_camera/rgb/image_raw", Image)  # If this is executed just after camera begins to be subscribed, obtained image is odd
         self.image_cb(img_msg)
         self.coral_cb(coral_msg)
-
 
     def get_foods_rects(self):
         if not self.rects_info:
@@ -72,19 +72,25 @@ class ImageProcessing:
                 bcenter_y = np.mean(box[:, 1])
                 if rect.x <= bcenter_x <= rect.x + rect.width:
                     if rect.y <= bcenter_y <= rect.y + rect.height:
+                        top_lst = []
+                        bottom_lst = []
                         for point in box:
-                            if point[0] < bcenter_x and point[1] < bcenter_y:
-                                left_top = point
-                            elif point[0] < bcenter_x and point[1] > bcenter_y:
-                                left_bottom = point
-                            elif point[0] > bcenter_x and point[1] > bcenter_y:
-                                right_bottom = point
+                            if point[1] < bcenter_y:
+                                top_lst.append(point)
+                            else:
+                                bottom_lst.append(point)
+                        top_lst.sort(key=lambda x:x[0])
+                        bottom_lst.sort(key=lambda x:x[0])
+                        ltop = top_lst[0]
+                        lbottom = bottom_lst[0]
+                        rbottom = bottom_lst[1]
                         # visualize result
-                        cv2.line(self.output_img, (left_top[0], left_top[1]), (left_bottom[0], left_bottom[1]), (0, 255, 0), thickness=2)
-                        cv2.line(self.output_img, (left_bottom[0], left_bottom[1]), (right_bottom[0], right_bottom[1]), (0, 255, 0), thickness=2)
-                        width = right_bottom[0] - left_bottom[0]
-                        length = left_bottom[1] - left_top[1] 
-                        self.two_length_list[i] = (width, length) 
+                        cv2.line(self.output_img, (ltop[0], ltop[1]), (lbottom[0], lbottom[1]), (0, 255, 0), thickness=2)
+                        cv2.line(self.output_img, (lbottom[0], lbottom[1]), (rbottom[0], rbottom[1]), (0, 255, 0), thickness=2)
+                        
+                        width =  math.sqrt((rbottom[0] - lbottom[0])**2 + (rbottom[1] - lbottom[1])**2)
+                        length = math.sqrt((lbottom[0] - ltop[0])**2 + (lbottom[1] - ltop[1])**2) 
+                        self.two_length_list[i] = (width, length)
         
     def publish_result(self):
         pub_msgs = RectArray()
@@ -95,15 +101,19 @@ class ImageProcessing:
             if info:
                 pub_msg.width = info[0]
                 pub_msg.height = info[1]
+            else:
+                pub_msg.width = 0
+                pub_msg.height = 0
             pub_msgs.rects.append(pub_msg)
         # visualize result
-        # cv2.imwrite("/home/tork/Desktop/images/output.png", self.output_img)
+        cv2.imwrite("/home/tanemoto/Desktop/images/output1118_3.png", self.output_img)
         pub = rospy.Publisher("/result_of_imageprocessing", RectArray, queue_size=1)
+        pub.publish(pub_msgs)
         while not rospy.is_shutdown():
             pub.publish(pub_msgs)
             rospy.sleep(0.1)
 
-    
+
 if __name__ == '__main__':
     rospy.init_node("get_food_rects")
     img_pro = ImageProcessing()

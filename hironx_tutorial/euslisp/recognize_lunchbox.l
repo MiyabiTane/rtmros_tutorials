@@ -45,7 +45,7 @@
   (send *hironxjsk* :larm 
 	:inverse-kinematics *hiro-pose*)
   (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -70) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -60) :world)
   (send-robot)
   )
 
@@ -86,7 +86,7 @@
   (setq hiro-hand-pos (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
   (setq *edge* (v+ hiro-hand-pos #f(0 0 -150))) 
   (format t "edge is ~A~%" *edge*)
-  (send *hironxjsk* :larm :move-end-pos (scale -3 move-vector))
+  (send *hironxjsk* :larm :move-end-pos (scale -3 move-vector) :world)
   (send-robot)
   )
 
@@ -112,7 +112,7 @@
   (setq hiro-hand-pos (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
   (setq *edge* (v+ hiro-hand-pos #f(-12.624 18.437 84.2388))) 
   (format t "edge is ~A~%" *edge*)
-  (send *hironxjsk* :larm :move-end-pos (scale -2 move-vector))
+  (send *hironxjsk* :larm :move-end-pos (scale -2 move-vector) :world)
   (send-robot)
   )
 
@@ -138,7 +138,7 @@
   (setq hiro-hand-pos (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
   (setq *edge* (v+ hiro-hand-pos #f(-12.624 18.437 84.2388))) ;;To Do
   (format t "edge is ~A~%" *edge*)
-  (send *hironxjsk* :larm :move-end-pos (scale -3 move-vector))
+  (send *hironxjsk* :larm :move-end-pos (scale -3 move-vector) :world)
   (send-robot)
   )
 
@@ -174,7 +174,7 @@
   (move_to)
   (get_range)
   (box_vis)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 20))
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 20) :world)
   (send-robot)
   (init-pose-20201030)
   )
