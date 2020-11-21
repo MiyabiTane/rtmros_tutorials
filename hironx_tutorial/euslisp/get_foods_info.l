@@ -13,6 +13,8 @@
 (setq pos_list '())
 (setq box_list '())
 (setq lbox_length nil)
+(setq radi_list '())
+
 
 ;;use tf
 (unless (boundp '*tfl*)
@@ -30,13 +32,13 @@
 ;;use xyz_to_screenpoint
 (defun publish-3Dcoords (x y z)
   (setq pub_msg (instance geometry_msgs::PointStamped :init))
-  (setq coords (make-coords :pos (float-vector x y z)))
-  (setq pub-coords (send (send *tfl* :lookup-transform "WAIST" "head_camera_rgb_optical_frame" (ros::time 0))
-			 :transform coords))
-  (setq pub-pos (send pub-coords :pos))
-  (send (send pub_msg :point) :x (elt pub-pos 0))
-  (send (send pub_msg :point) :y (elt pub-pos 1))
-  (send (send pub_msg :point) :z (elt pub-pos 2))
+  ;;(setq coords (make-coords :pos (float-vector x y z)))
+  ;;(setq pub-coords (send (send *tfl* :lookup-transform "WAIST" "head_camera_rgb_optical_frame" (ros::time 0))
+  ;;			 :transform coords))
+  ;;(setq pub-pos (send pub-coords :pos))
+  (send (send pub_msg :point) :x x)
+  (send (send pub_msg :point) :y y)
+  (send (send pub_msg :point) :z z)
   (ros::publish *pub-topic* pub_msg)
   )
 
@@ -140,15 +142,20 @@
     (format t "x, y, lbox_length, length ~A ~A ~A ~A~%" (send rect :width) (send rect :height) lbox_length *length*)
     (if (not (= (send rect :width) 0))
 	(progn
+	  (setq grad (/ y x))
+	  (if (> y x) ;;トングが長い方の辺を挟むように掴みたい
+	      (setq radi (+ grad (/ pi 2)))
 	  (setq width_ (* (/ (send rect :width) lbox_length) *length*))
 	  (setq height_ (* (/ (send rect :height) lbox_length) *length*)))
       (progn
+	(setq radi 0)
 	(setq width_ (elt size 0))
 	(setq height_ (elt size 1)))
       )
     (setq size_list (list width_ height_ (elt size 2)))
     ;;(format t "size ~A~%" size_list)
     (setq box_list (list-insert size_list (length box_list) box_list))
+    (setq radi_list (append radi_list radi))
     )
   )
   

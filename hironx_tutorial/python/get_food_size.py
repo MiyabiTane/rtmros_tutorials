@@ -19,7 +19,7 @@ class ImageProcessing:
         self.output_img = None
         self.rects_info = None
         self.header = None
-        self.two_length_list = None
+        self.pub_info_list = None
         self.bridge = CvBridge()
         
     def image_cb(self, msg):
@@ -31,7 +31,7 @@ class ImageProcessing:
         print("Coral Called")
         self.rects_info = msg.rects
         self.header = msg.header
-        self.two_length_list = [[]] * len(self.rects_info)
+        self.pub_info_list = [[]] * len(self.rects_info)
         # draw coral result
         self.output_img = deepcopy(self.cv_image)
         for rect in self.rects_info:
@@ -89,24 +89,30 @@ class ImageProcessing:
                         cv2.line(self.output_img, (lbottom[0], lbottom[1]), (rbottom[0], rbottom[1]), (0, 255, 0), thickness=2)
                         
                         width =  math.sqrt((rbottom[0] - lbottom[0])**2 + (rbottom[1] - lbottom[1])**2)
-                        length = math.sqrt((lbottom[0] - ltop[0])**2 + (lbottom[1] - ltop[1])**2) 
-                        self.two_length_list[i] = (width, length)
+                        length = math.sqrt((lbottom[0] - ltop[0])**2 + (lbottom[1] - ltop[1])**2)
+                        len_x =  rbottom[0] - lbottom[0]
+                        len_y = rbottom[1] - lbottom[1]
+                        self.pub_info_list[i] = (len_x, len_y, width, length)
         
     def publish_result(self):
         pub_msgs = RectArray()
         pub_msgs.header = self.header
         pub_msgs.rects = self.rects_info
-        for info, rect_origin in zip(self.two_length_list, self.rects_info):
+        for info, rect_origin in zip(self.pub_info_list, self.rects_info):
             pub_msg = rect_origin
             if info:
-                pub_msg.width = info[0]
-                pub_msg.height = info[1]
+                pub_msg.x = info[0]
+                pub_msg.y = info[1]
+                pub_msg.width = info[2]
+                pub_msg.height = info[3]
             else:
+                pub_msg.x = 0
+                pub_msg.y = 0
                 pub_msg.width = 0
                 pub_msg.height = 0
             pub_msgs.rects.append(pub_msg)
         # visualize result
-        cv2.imwrite("/home/tanemoto/Desktop/images/output1118_3.png", self.output_img)
+        cv2.imwrite("/home/tanemoto/Desktop/images/output.png", self.output_img)
         pub = rospy.Publisher("/result_of_imageprocessing", RectArray, queue_size=1)
         pub.publish(pub_msgs)
         while not rospy.is_shutdown():

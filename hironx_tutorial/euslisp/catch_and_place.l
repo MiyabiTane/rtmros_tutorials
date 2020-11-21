@@ -6,12 +6,29 @@
   )
 
 (defun close-tongs ()
-  ;;(send *hironxjsk* :hand-angle-vector :rhand #f(-15.499 15.499 15.499 -15.499))
-  (send *hironxjsk* :hand-angle-vector :rhand #f(-20.499 20.499 20.499 -20.499))
+  (setq close #f(-5 5 5 -5))
+  (setq diff 0)
+  (while (< diff 2.0)
+    (setq prev_hand (send *ri* :hand-angle-vector :rhand))
+    (send *hironxjsk* :hand-angle-vector :rhand (v+ prev_hand close))
+    (send-right-hand 2.0)
+    (setq cur_hand (send *ri* :hand-angle-vector :rhand))
+    (setq diff (norm (v- (v- cur_hand prev_hand) close)))
+    (format t "diff ~A~%" diff)
+    (when (< (elt (send *hironxjsk* :hand-angle-vector :rhand) 0) -16)
+      (format t "enough~%")
+      (setq diff 3))
+    (send-right-hand 2.0)
+    )
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 50) :world)
+  (send-robot)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 -50) :world)
+  (send-robot)
+  (send *hironxjsk* :hand-angle-vector :rhand #f(20.449 -20.449 -20.449 20.449))
   (send-right-hand 2.0)
-  )	
+  )
 
-(defun catch-food (pos)
+(defun catch-food (pos radi)
   ;;same pose 
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
   (setq pos (v+ pos *tong-offset*)) ;;tong offset
@@ -22,6 +39,13 @@
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 70) :world)
   (send-robot)
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 -70) :world)
+  ;;おかずに合わせたトングの回転
+  (setq degree (/ (radi * 180) pi))
+  (send *hironxjsk* :rarm_joint5 :joint-angle (+ 100 degree))
+  (setq rot_x (* 114.508 (sin radi)))
+  (setq rot_y (* 114.508 (- (cos radi) 1)))
+  (setq rotation-offset (float-vector rot_x rot_y 0))
+  (send *hironxjsk* :rarm :move-end-pos rotation-offset)
   (send-robot)
   (close-tongs)
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 70) :world)
@@ -29,17 +53,16 @@
   )
 
 (defun place-food (pos)
-  ;;(format t "pos: ~A~%" pos)
   ;;same pose
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
-  (setq pos (float-vector (elt pos 0) (* (elt pos 1) -1) (elt pos 2))) 
-  (setq pos (v+ pos (float-vector *front* *left* 0))) ;;*coords*<-lunchbox pos
-  ;;(format t "target food pos: ~A~%" pos)
-  (setq pos (v+ pos *tong-offset-2*)) ;;tong offset
+  ;;(setq pos (float-vector (elt pos 0) (* (elt pos 1) -1) (elt pos 2))
+  ;;(setq pos (v+ pos (float-vector *front* *left* 0))) ;;*coords*<-lunchbox pos
+  ;;お弁当箱の真ん中に入れてから幅寄せする
+  (setq pos (float-vector (/ (+ *front* back) 2) (/ (+ *left* right) 2) 0))
+  (setq pos (v+ pos *tong-offset*)) ;;tong offset
   (setq pos (v+ pos (float-vector 0 0 (- *catch-z* (elt pos 2))))) ;;set z *catch-z*
   (setq *move* (v- pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
-  ;;(format t "hiro_pose ~A~%" *hiro-pose*)
   (send *hironxjsk* :rarm :inverse-kinematics *hiro-pose*)
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 100) :world)
   (send-robot)
@@ -56,7 +79,7 @@
   (open-tongs)
   (dotimes (i (length place_list))
     (when (> (elt (elt place_list i) 0) 0)
-      (catch-food (elt pos_list i))
+      (catch-food (elt pos_list i) (elt radi_list i))
       (place-food (elt place_list i))
       )
     )
