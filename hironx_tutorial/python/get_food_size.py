@@ -72,26 +72,26 @@ class ImageProcessing:
                 bcenter_y = np.mean(box[:, 1])
                 if rect.x <= bcenter_x <= rect.x + rect.width:
                     if rect.y <= bcenter_y <= rect.y + rect.height:
-                        top_lst = []
-                        bottom_lst = []
+                        left_lst = []
+                        right_lst = []
                         for point in box:
-                            if point[1] < bcenter_y:
-                                top_lst.append(point)
+                            if point[0] < bcenter_x:
+                                left_lst.append(point)
                             else:
-                                bottom_lst.append(point)
-                        top_lst.sort(key=lambda x:x[0])
-                        bottom_lst.sort(key=lambda x:x[0])
-                        ltop = top_lst[0]
-                        lbottom = bottom_lst[0]
-                        rbottom = bottom_lst[1]
+                                right_lst.append(point)
+                        left_lst.sort(key=lambda x:x[1])
+                        right_lst.sort(key=lambda x:x[1])
+                        ltop = left_lst[0]
+                        lbottom = left_lst[1]
+                        rbottom = right_lst[1]
                         # visualize result
                         cv2.line(self.output_img, (ltop[0], ltop[1]), (lbottom[0], lbottom[1]), (0, 255, 0), thickness=2)
-                        cv2.line(self.output_img, (lbottom[0], lbottom[1]), (rbottom[0], rbottom[1]), (0, 255, 0), thickness=2)
+                        cv2.line(self.output_img, (lbottom[0], lbottom[1]), (rbottom[0], rbottom[1]), (255, 0, 0), thickness=2)
                         
                         width =  math.sqrt((rbottom[0] - lbottom[0])**2 + (rbottom[1] - lbottom[1])**2)
                         length = math.sqrt((lbottom[0] - ltop[0])**2 + (lbottom[1] - ltop[1])**2)
                         len_x =  rbottom[0] - lbottom[0]
-                        len_y = rbottom[1] - lbottom[1]
+                        len_y = lbottom[1] - rbottom[1]
                         self.pub_info_list[i] = (len_x, len_y, width, length)
         
     def publish_result(self):
