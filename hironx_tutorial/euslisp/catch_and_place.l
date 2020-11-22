@@ -52,14 +52,55 @@
   (send-robot)
   )
 
+(defun pull_over (pos lbox-pos)
+  (setq place-x (elt pos 0))
+  (setq place-y (elt pos 1))
+  (setq lbox-x (elt lbox-pos 0))
+  (setq lbox-y (elt lbox-pos 1))
+  (setq size-x (elt food-size 0))
+  (setq size-y (elt food-size 1))
+  (when (> place-x lbox-x)
+    (setq xstart-pos (- (- lbox-x (/ size-x 2)) 5))
+    (setq xgoal-pos (- place-x (/ size-x 2))))
+  (when (< place-x lbox-x)
+    (setq xstart-pos (+ (+ lbox-x (/ size-x 2)) 5))
+    (setq xgoal-pos (+ place-x (/ size-x 2))))
+  (when (> place-y lbox-y)
+    (setq ystart-pos (- (- lbox-y (/ size-y 2)) 5))
+    (setq ygoal-pos (- place-y (/ size-y 2))))
+  (when (< place-y lbox-y)
+    (setq ystart-pos (+ (+ lbox-y (/ size-y 2)) 5))
+    (setq ygoal-pos (+ place-y (/ size-y 2))))
+  ;;move-to start-pos
+  (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
+  (setq start-pos (float-vector xstart-pos ystart-pos (+ *G-z* 60)))
+  (setq start-pos (v+ start-pos *chopstick-offset*))
+  (setq *move* (v- start-pos (send *hiro-pose* :pos)))
+  (send *hironxjsk* :translate *move* :world)
+  (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
+  (send-robot)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -60) :world)
+  (send-robot)
+  ;;pull-over
+  (send *hironxjsk* :larm :move-end-pos (float-vector (- xgoal-pos xstart-pos) 0 0) :world)
+  (send-robot)
+  (send *hironxjsk* :larm :move-end-pos (float-vector 0 (- ygoal-pos ystart-pos) 0) :world)
+  (send-robot)
+  ;;finish
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 60) :world)
+  (send-robot)
+  (init-pose-20201030)
+  )
+  
+
 (defun place-food (pos)
   ;;same pose
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
-  ;;(setq pos (float-vector (elt pos 0) (* (elt pos 1) -1) (elt pos 2))
-  ;;(setq pos (v+ pos (float-vector *front* *left* 0))) ;;*coords*<-lunchbox pos
+  (setq goal (float-vector (elt pos 0) (* (elt pos 1) -1) (elt pos 2)))
+  (setq goal (v+ pos (float-vector *front* *left* 0))) ;;*coords*<-lunchbox pos
   ;;お弁当箱の真ん中に入れてから幅寄せする
-  (setq pos (float-vector (/ (+ *front* back) 2) (/ (+ *left* right) 2) 0))
-  (setq pos (v+ pos *tong-offset*)) ;;tong offset
+  (setq lpos (float-vector (/ (+ *front* back) 2) (/ (+ *left* right) 2) 0))
+  (setq pos (v+ lpos *tong-offset*)) ;;tong offset
   (setq pos (v+ pos (float-vector 0 0 (- *catch-z* (elt pos 2))))) ;;set z *catch-z*
   (setq *move* (v- pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
@@ -67,18 +108,20 @@
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 100) :world)
   (send-robot)
   (open-tongs)
+  (init-pose-20201030)
+  ;;(pull_over goal lpos)
   )
 
 (setq *tong-offset* #f(-39.159 -114.508 100.161))
+(setq *chopstick-offset* #f(-12.624 18.437 84.2388))
 (setq *tong-offset-2* #f(0 -114.508 100.161))
 (defun catch_and_place_main()
   (format t "- - - CATCH AND PLACE - - -~%")
-  ;;(setq pos_list (list #f(356.094 -155.46 -78.2884) #f(392.641 -112.817 -75.8539)))
-  ;;(setq place_list (list #f(0.0 0.0 28.1427) #f(0.0 0.0 19.4847)))
   (init-pose-20201030)
   (open-tongs)
   (dotimes (i (length place_list))
     (when (> (elt (elt place_list i) 0) 0)
+      (setq food-size (elt box_list i))
       (catch-food (elt pos_list i) (elt radi_list i))
       (place-food (elt place_list i))
       )
