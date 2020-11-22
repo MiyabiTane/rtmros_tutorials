@@ -32,13 +32,13 @@
 ;;use xyz_to_screenpoint
 (defun publish-3Dcoords (x y z)
   (setq pub_msg (instance geometry_msgs::PointStamped :init))
-  ;;(setq coords (make-coords :pos (float-vector x y z)))
-  ;;(setq pub-coords (send (send *tfl* :lookup-transform "WAIST" "head_camera_rgb_optical_frame" (ros::time 0))
-  ;;			 :transform coords))
-  ;;(setq pub-pos (send pub-coords :pos))
-  (send (send pub_msg :point) :x x)
-  (send (send pub_msg :point) :y y)
-  (send (send pub_msg :point) :z z)
+  (setq coords (make-coords :pos (float-vector x y z)))
+  (setq pub-coords (send (send *tfl* :lookup-transform "WAIST" "head_camera_rgb_optical_frame" (ros::time 0))
+  			 :transform coords))
+  (setq pub-pos (send pub-coords :pos))
+  (send (send pub_msg :point) :x (elt pub-pos 0))
+  (send (send pub_msg :point) :y (elt pub-pos 1))
+  (send (send pub_msg :point) :z (elt pub-pos 2))
   (ros::publish *pub-topic* pub_msg)
   )
 
@@ -92,13 +92,15 @@
   (dotimes (i 2)
     (if fin (return))
     (setq b_time (send (send (send (elt b_cb_lst i) :header) :stamp) :sec-nsec))
-    (format t "time ~A~%" b_time)
+    (format t "b_time ~A~%" b_time)
     (dotimes (j 2)
+      (if fin (return))
       (setq c_time (send (send (send (elt n_cb_lst j) :header) :stamp) :sec-nsec))
-      (format t "time ~A~%" c_time)
+      (format t "c_time ~A~%" c_time)
       (dotimes (k 2)
+	(if fin (return))
 	(setq r_time (send (send (send (elt r_cb_lst k) :header) :stamp) :sec-nsec))
-	(format t "time ~A~%" r_time)
+	(format t "r_time ~A~%" r_time)
 	(when (and (and (= (elt b_time 0) (elt c_time 0)) (= (elt b_time 0) (elt r_time 0)))
 		   (and (< (abs (- (elt b_time 1) (elt c_time 1))) 1000)
 			(< (abs (- (elt b_time 1) (elt r_time 1))) 1000)))
@@ -139,12 +141,15 @@
     (setq size (ros::tf-point->pos (send bbox :dimensions)))
     ;;おかずの縦横の大きさは画像処理の結果を使う
     (setq rect (elt got_rects_list i))
-    (format t "x, y, lbox_length, length ~A ~A ~A ~A~%" (send rect :width) (send rect :height) lbox_length *length*)
+    (format t "x, y, width, height ~A ~A ~A ~A~%" (send rect :x) (send rect :y) (send rect :width) (send rect :height))
     (if (not (= (send rect :width) 0))
 	(progn
-	  (setq grad (/ y x))
-	  (if (> y x) ;;トングが長い方の辺を挟むように掴みたい
-	      (setq radi (+ grad (/ pi 2)))
+	  (setq x (float (send rect :x)))
+	  (setq y (float (send rect :y)))
+	  (setq radi (atan (/ y x)))
+	  (format t "radi ~A~%" radi)
+	  ;;(if (> x (+ y 15)) ;;トングが長い方の辺を挟むように掴みたい
+	  ;;    (setq radi (- radi (/ pi 2))))
 	  (setq width_ (* (/ (send rect :width) lbox_length) *length*))
 	  (setq height_ (* (/ (send rect :height) lbox_length) *length*)))
       (progn
@@ -155,10 +160,10 @@
     (setq size_list (list width_ height_ (elt size 2)))
     ;;(format t "size ~A~%" size_list)
     (setq box_list (list-insert size_list (length box_list) box_list))
-    (setq radi_list (append radi_list radi))
+    (setq radi_list (append radi_list (list radi)))
     )
   )
-  
+
 
 (defun main_loop ()
   (publish-3Dcoords back right *G-z*)

@@ -39,7 +39,7 @@
   (send *hironxjsk* :head :look-at
         (send (send (send *hironxjsk* :torso :end-coords :copy-worldcoords)
                     :translate #f(750 0 0)) :worldpos))
-  (send *hironxjsk* :head :look-at #f(600 0 0))
+  (send *hironxjsk* :head :look-at #f(500 0 0))
   ;;(send-robot)
   )
 
@@ -72,6 +72,7 @@
   (send *hironxjsk* :rarm :move-end-pos #f(50 0 150) :world)
   (send *hironxjsk* :rarm_joint5 :joint-angle 100)
   (send *hironxjsk* :rarm_joint3 :joint-angle 35)
+  (send *hironxjsk* :rarm_joint4 :joint-angle 48)
   (look-73b2-table)
   (send-robot)
   )
@@ -91,15 +92,16 @@
 
 ;;get lunchbox position and size
 (load "recognize_lunchbox.l")
-;;(recognize_lunchbox_main)
-(setq *G-z* -40.5341)
-(setq right -1.79236)
-(setq back 504.795)
-(setq *left* 71.7166)
-(setq *front* 400.406)
-(setq *length* 125.673)
-(setq *width* 70.3547)
-
+(recognize_lunchbox_main)
+#|
+(setq *G-z* -43.7091)
+(setq right -85.9902)
+(setq back 523.885)
+(setq *left* -15.5319)
+(setq *front* 408.68)
+(setq *length* 115.205)
+(setq *width* 70.4583)
+|#
 (format t "G-z ~A~%" *G-z*)
 (format t "right ~A back ~A~%" right back)
 (format t "left ~A front ~A~%" *left* *front*)
@@ -107,8 +109,8 @@
 
 ;;get catch-z coords
 (load "check_table_height.l")
-;;(check_table_height_main)
-(setq *catch-z* -15.5801)
+(check_table_height_main)
+;;(setq *catch-z* -0.45)
 (format t "catch-z ~A~%" *catch-z*)
 
 ;;get food position and size
@@ -117,6 +119,7 @@
 (format t "name_list ~A~%" name_list)
 (format t "pos_list ~A~%" pos_list)
 (format t "box_list ~A~%" box_list)
+(format t "radi_list ~A~%" radi_list)
 
 ;;publish food info and lunchbox info
 (load "info_publisher.l")
