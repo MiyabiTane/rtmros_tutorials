@@ -108,6 +108,7 @@
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :rarm :inverse-kinematics *hiro-pose*)
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 80) :world)
+  (send *hironxjsk* :rarm_joint5 :joint-angle 100)
   (send-robot)
   (open-tongs)
   (init-pose-20201030)
