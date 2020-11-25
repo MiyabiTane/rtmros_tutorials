@@ -114,7 +114,7 @@
   ;;(pull_over goal lpos)
   )
 
-(setq *tong-offset* #f(-39.159 -114.508 100.161))
+(setq *tong-offset* #f(-22.0 -114.0 100.161))
 (setq *chopstick-offset* #f(-12.624 18.437 84.2388))
 (setq *tong-offset-2* #f(0 -114.508 100.161))
 (defun catch_and_place_main()
@@ -133,3 +133,6 @@
 ;;#f(-110.25 9.0407 64.6251) hand-pos - real-pos(rarm)
 ;;tong(rotate 90)
 ;;#f(-39.159 -114.508 100.161)
+
+;;11/25トング逆向きにした
+;;#f(-22.0 -114.0 100.161)

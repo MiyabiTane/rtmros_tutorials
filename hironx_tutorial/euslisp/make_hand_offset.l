@@ -38,7 +38,7 @@
   (send *hironxjsk* :larm_joint4 :joint-angle -35)
   (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
   (send *hironxjsk* :rarm :move-end-pos #f(50 0 150) :world)
-  (send *hironxjsk* :rarm_joint5 :joint-angle 100)
+  (send *hironxjsk* :rarm_joint5 :joint-angle -75)
   (send *hironxjsk* :rarm_joint3 :joint-angle 35)
   (send *hironxjsk* :rarm_joint4 :joint-angle 48)
   (send-robot)
