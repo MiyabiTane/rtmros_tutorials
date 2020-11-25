@@ -72,13 +72,10 @@ class ImageProcessing:
                 bcenter_y = np.mean(box[:, 1])
                 if rect.x <= bcenter_x <= rect.x + rect.width:
                     if rect.y <= bcenter_y <= rect.y + rect.height:
-                        left_lst = []
-                        right_lst = []
-                        for point in box:
-                            if point[0] < bcenter_x:
-                                left_lst.append(point)
-                            else:
-                                right_lst.append(point)
+                        x_sorted = (deepcopy(box)).tolist()
+                        x_sorted.sort(key=lambda x:x[0])
+                        left_lst = x_sorted[:2]
+                        right_lst = x_sorted[2:]
                         left_lst.sort(key=lambda x:x[1])
                         right_lst.sort(key=lambda x:x[1])
                         ltop = left_lst[0]
