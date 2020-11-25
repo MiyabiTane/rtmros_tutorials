@@ -146,13 +146,14 @@
 	(progn
 	  (setq x (float (send rect :x)))
 	  (setq y (float (send rect :y)))
-	  ;;縦横比があまりないものはそのまま
-	  (if (> (abs (- (send rect :width) (send rect :height))) 10)
-	      (setq radi (atan (/ y x)))
-	    (setq radi 0))
+	  (cond ((< (abs (- (send rect :width) (send rect :height))) 10)
+		 (setq radi 0)) ;;縦横比があまりないものはそのまま
+		((> (- (send rect :height) (send rect :width)) 10)
+		 (setq radi (atan (/ y x))))
+		((> (- (send rect :width) (send rect :height)) 10)
+		 (setq radi (+ (atan (/ y x)) (/ pi 2)))) ;;辺が長い方を掴むように
+		)
 	  (format t "radi ~A~%" radi)
-	  ;; To Do
-	  ;;可能ならトングが長い方の辺を挟むように掴みたい
 	  (setq width_ (* (/ (send rect :width) lbox_length) *length*))
 	  (setq height_ (* (/ (send rect :height) lbox_length) *length*)))
       (progn
@@ -184,6 +185,7 @@
 	 (ros::sleep))
   (format t "lbox_bottom ~A~%" lbox_bottom)
   (ros::unsubscribe "/xyz_to_screenpoint/output")
+  (ros::duration-sleep 1.0)
   (ros::subscribe "/edgetpu_boxes_synchronizer/pub_00" jsk_recognition_msgs::ClassificationResult #'get_name_cb)
   (ros::subscribe "/edgetpu_boxes_synchronizer/pub_01" jsk_recognition_msgs::BoundingBoxArray #'get_box_cb)
   (ros::subscribe "/edgetpu_boxes_synchronizer/pub_02" jsk_recognition_msgs::RectArray #'get_rects_cb)
