@@ -147,14 +147,16 @@
 	  (setq x (float (send rect :x)))
 	  (setq y (float (send rect :y)))
 	  ;;縦横比があまりないものはそのまま
-	  (when (> (abs (- (setq rect :width) (setq rect :height))) 10)
-	    (setq radi (atan (/ y x)))
-	    (format t "radi ~A~%" radi))
+	  (if (> (abs (- (send rect :width) (send rect :height))) 10)
+	      (setq radi (atan (/ y x)))
+	    (setq radi 0))
+	  (format t "radi ~A~%" radi)
 	  ;; To Do
 	  ;;可能ならトングが長い方の辺を挟むように掴みたい
 	  (setq width_ (* (/ (send rect :width) lbox_length) *length*))
 	  (setq height_ (* (/ (send rect :height) lbox_length) *length*)))
       (progn
+	(format t "result not found~%")
 	(setq radi 0)
 	(setq width_ (elt size 0))
 	(setq height_ (elt size 1)))
