@@ -43,16 +43,6 @@
   ;;(send-robot)
   )
 
-(defun init-pose-20201001 ()
-  (send *hironxjsk* :reset-manip-pose)
-  (send *hironxjsk* :larm_joint4 :joint-angle -35)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
-  (send *hironxjsk* :rarm_joint1 :joint-angle 20) 
-  (send *hironxjsk* :rarm :move-end-pos #f(150 0 300))
-  (look-73b2-table)
-  (send-robot)
-  )
-
 (defun init-pose-20201030 ()
   (send *hironxjsk* :reset-manip-pose)
   (send *hironxjsk* :larm_joint4 :joint-angle -35)
@@ -78,16 +68,16 @@
 
 (defun open-hand ()
   ;;open hand
-  (send *hironxjsk* :hand-angle-vector :lhand #f(20.449 -20.449 -20.449 20.449))
+  (send *hironxjsk* :hand-angle-vector :lhand #f(10.449 -10.449 -10.449 10.449))
   (send-left-hand 2.0)
-  (send *hironxjsk* :hand-angle-vector :rhand #f(20.449 -20.449 -20.449 20.449))
+  (send *hironxjsk* :hand-angle-vector :rhand #f(10.449 -10.449 -10.449 10.449))
   (send-right-hand 2.0)
   )
 
 ;;To Do load all file at first
 
 (look-73b2-table)
-(init-pose-20201030)
+(move_hand_out_of_camera)
 
 ;;get lunchbox position and size
 (load "recognize_lunchbox.l")

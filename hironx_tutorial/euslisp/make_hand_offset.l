@@ -29,7 +29,7 @@
   (send *hironxjsk* :head :look-at
         (send (send (send *hironxjsk* :torso :end-coords :copy-worldcoords)
                     :translate #f(750 0 0)) :worldpos))
-  (send *hironxjsk* :head :look-at #f(600 0 0))
+  (send *hironxjsk* :head :look-at #f(500 0 0))
   ;;(send-robot)
   )
 
@@ -46,7 +46,7 @@
   (send *hironxjsk* :head :look-at
         (send (send (send *hironxjsk* :torso :end-coords :copy-worldcoords)
                     :translate #f(750 0 0)) :worldpos))
-  (send *hironxjsk* :head :look-at #f(600 0 0))
+  (send *hironxjsk* :head :look-at #f(500 0 0))
   (send-robot)
   ;;open hand
   (send *hironxjsk* :hand-angle-vector :lhand #f(20.449 -20.449 -20.449 20.449))

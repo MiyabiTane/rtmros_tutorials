@@ -14,7 +14,6 @@
     (setq loop_flag nil))
   )
 
-
 (defun get-z-coords ()
   (setq moved_count 0)
   (setq loop_flag t)
@@ -52,7 +51,7 @@
   (open-hand)
   (setq *hiro-pos* (send (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords) :pos))
   (setq move-z (- (+ *G-z* 105) (elt *hiro-pos* 2)))
-  (send *hironxjsk* :rarm :move-end-pos (float-vector 0 -170 move-z) :world)
+  (send *hironxjsk* :rarm :move-end-pos (float-vector 120 -100 move-z) :world)
   (send-robot)
   (get-z-coords)
   (ros::unsubscribe "/rhsendor")
