@@ -16,9 +16,12 @@ from jsk_recognition_msgs.msg import Rect
 from jsk_recognition_msgs.msg import LabelArray
 from geometry_msgs.msg import PoseArray
 from std_msgs.msg import Int16
+from std_msgs.msg import Int16MultiArray
 
 import hiro_talk
 import cv2
+
+SAVE_NAME = "output1128.png"
 
 """
 x: width, y: height
@@ -38,7 +41,7 @@ class StuffFood():
     def __init__(self, name_list, box_list, box_size, like_list, dislike_list, want_to_eat, indivisuals, generation):
         self.indivisuals = indivisuals
         self.generation = generation
-        self.box_size = box_size
+        self.box_size = [box_size[0] - 10, box_size[1] - 10]
         self.want_to_eat = want_to_eat
         self.name_to_index_dict = {}
         for i, food in enumerate(name_list):
@@ -212,8 +215,49 @@ class StuffFood():
             else:
                 best_stuff[i] = (best_stuff[i][0] + self.box_dict[i][0]/2, best_stuff[i][1] + self.box_dict[i][1]/2)
         print(best_stuff)
-        self.visualize(best_stuff, cannot_stuff, "output.png")
+        self.visualize(best_stuff, cannot_stuff, SAVE_NAME)
         return best_stuff, cannot_stuff
+
+
+    def visualize_place_order(self, open_name, save_name, best_stuff, order_lst):
+        img = cv2.imread(open_name)
+        for i, index in enumerate(order_lst):
+            left_bottom = (int(best_stuff[index][0] - self.box_dict[index][0]/2), int(best_stuff[index][1] + self.box_dict[index][1]/2))
+            cv2.putText(img, str(i), left_bottom, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), thickness=2)
+        cv2.imwrite(save_name, img)
+
+    
+    def calc_place_order(self, box_list, stuff_pos):
+    # Decide the boundaries of the column based on the average size of the side dish
+        food_height = np.array(box_list)[:, 1]
+        ave_height = np.mean(food_height)
+        num = int(self.box_size[1] // ave_height) + 1
+        place_row_lst = [[]] * num
+        slip_lst = []
+        order_lst = np.array([])
+        for i, pos in enumerate(stuff_pos):
+            # The robot have known that tomato is slippery
+            if self.name_list[i] == "tomato":
+                slip_lst.append(i)
+            elif pos[0] != 0:
+                row = int(pos[1] // ave_height)
+                lst = deepcopy(place_row_lst[row])
+                lst.append((i, pos[0], pos[1]))
+                place_row_lst[row] = lst
+        # print("place_row_lst:", place_row_lst)
+        count = 0
+        for _ in range(len(place_row_lst)):
+            place_row = place_row_lst[count]
+            # sort by distance 
+            if place_row:
+                place_row.sort(key=lambda x: abs(x[1] - self.box_size[0]))
+                index = np.array(place_row)[:, 0]
+                # print("index :", index)
+                order_lst = np.concatenate([order_lst, index])
+            count = count * -1 if count < 0 else (count * -1) - 1
+        order_lst = np.concatenate([order_lst, np.array(slip_lst)]).astype(np.int16)
+        print(order_lst)
+        return order_lst
 
 
 class SubscribeVisualInfo():
@@ -228,13 +272,9 @@ class SubscribeVisualInfo():
 
     def lunchbox_info_cb(self, msg):
         self.box_size = [msg.width, msg.height]
-        if self.box_size:
-            self.flag1 = False
 
     def name_info_cb(self, msg):
         self.name_list = msg.labels
-        if self.name_list:
-            self.flag2 = False 
         copy = []
         for i in range(len(self.name_list)):
             copy.append(self.name_list[i].name)
@@ -242,9 +282,6 @@ class SubscribeVisualInfo():
 
     def size_info_cb(self, msg):
         self.box_list = msg.poses
-        #print(self.box_size)
-        if self.box_list:
-            self.flag3 = False
         copy = []
         for i in range(len(self.box_list)):
             lst = [self.box_list[i].position.x, self.box_list[i].position.y, self.box_list[i].position.z]
@@ -253,25 +290,24 @@ class SubscribeVisualInfo():
             
     def get_vis_info(self):
         rospy.init_node("hiro_lunchbox")
-        while self.flag1:
-            rospy.Subscriber("/lunchbox_info", Rect, self.lunchbox_info_cb)
-            rospy.sleep(1.0)
+        lbox_msg = rospy.wait_for_message("/lunchbox_info", Rect)
+        name_msg = rospy.Subscriber("/food_name_info", LabelArray)
+        food_size_msg = rospy.Subscriber("/food_size_info", PoseArray)
+        self.lunchbox_info_cb(lbox_msg)
+        self.name_info_cb(name_msg)
+        self.size_info_cb(food_size_msg)
         print("box_size is ", self.box_size)
-        while self.flag2:
-            rospy.Subscriber("/food_name_info", LabelArray, self.name_info_cb)
-            rospy.sleep(1.0) 
-        print("names are ", self.name_list)
-        while self.flag3:
-            rospy.Subscriber("/food_size_info", PoseArray, self.size_info_cb)
-            rospy.sleep(1.0)      
-        print("food size  ", self.box_size)
-        return self.box_size, self.name_list, self.box_list
-
+        print("names are ", self.name_list) 
+        print("food size  ", self.box_list)
+        if self.box_size and self.name_list and self.box_list:
+            return self.box_size, self.name_list, self.box_list
+        self.get_vis_info()
 
 def get_talk_info(name_list):
     Talk = hiro_talk.TalkWith()
     like_list, dislike_list, want_to_eat = Talk.main_before_stuff(name_list)
     return like_list, dislike_list, want_to_eat
+
 
 def main():
     print("Called GA main")
@@ -282,9 +318,12 @@ def main():
     print(name_list)
     print(box_size)
     #subscribe info from talking
-    like_list, dislike_list, want_to_eat = get_talk_info(name_list)
+    # like_list, dislike_list, want_to_eat = get_talk_info(name_list)
+    like_list = [["rolled_egg", "tomato"]]
+    dislike_list = [["tomato", "tomato"]]
+    want_to_eat = [["rolled_egg"]]
     #calc stuff pos using GA and BL
-    stuff = StuffFood(name_list, box_list, box_size, like_list, dislike_list,want_to_eat, 12, 1000)
+    stuff = StuffFood(name_list, box_list, box_size, like_list, dislike_list, want_to_eat, 12, 1000)
     best_stuff, _ = stuff.GA_main()
     #publish stuff canter coords and box width and height
     pub = rospy.Publisher('/stuff_food_pos', PoseArray, queue_size = 1)
@@ -295,12 +334,21 @@ def main():
         pose.position.y = stuff_pos[1]
         pose.position.z = box_list[i][2]
         pose_msg.poses.append(pose)
-    pub2 = rospy.Publisher('/calc_finish_flag', Int16, queue_size = 1)
+    # calc place order and publish
+    order_lst = stuff.calc_place_order(box_list, best_stuff)
+    stuff.visualize_place_order(SAVE_NAME, "order_" + SAVE_NAME, best_stuff, order_lst)
+    pub2 = rospy.Publisher('/stuff_order', Int16MultiArray, queue_size = 1)
+    order_msg = Int16MultiArray()
+    order_msg.data = order_lst
+    # publish flag
+    pub3 = rospy.Publisher('/calc_finish_flag', Int16, queue_size = 1)
     flag_msg = Int16()
     flag_msg.data = 1
+    # publish
     while not rospy.is_shutdown():
-        pub.publish(pose_msg) 
-        pub2.publish(flag_msg)
+        pub.publish(pose_msg)
+        pub2.publish(order_msg) 
+        pub3.publish(flag_msg)
         rospy.sleep(0.1)
 
 main()

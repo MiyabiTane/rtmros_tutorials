@@ -149,9 +149,12 @@
 	  (cond ((< (abs (- (send rect :width) (send rect :height))) 10)
 		 (setq radi 0)) ;;縦横比があまりないものはそのまま
 		((> (- (send rect :height) (send rect :width)) 10)
-		 (setq radi (atan (/ y x))))
-		((> (- (send rect :width) (send rect :height)) 10)
-		 (setq radi (+ (atan (/ y x)) (/ pi 2)))) ;;辺が長い方を掴むように
+		 (progn
+		   (send (send rect :width) (send rect :height))
+		   (send (send rect :height) (send rect :width))
+		   (setq radi (atan (/ y x))))
+		 ((> (- (send rect :width) (send rect :height)) 10)
+		  (setq radi (+ (atan (/ y x)) (/ pi 2))))) ;;辺が長い方を掴むように
 		)
 	  (format t "radi ~A~%" radi)
 	  (setq width_ (* (/ (send rect :width) lbox_length) *length*))
