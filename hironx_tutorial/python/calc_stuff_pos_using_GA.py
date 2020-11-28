@@ -291,8 +291,8 @@ class SubscribeVisualInfo():
     def get_vis_info(self):
         rospy.init_node("hiro_lunchbox")
         lbox_msg = rospy.wait_for_message("/lunchbox_info", Rect)
-        name_msg = rospy.Subscriber("/food_name_info", LabelArray)
-        food_size_msg = rospy.Subscriber("/food_size_info", PoseArray)
+        name_msg = rospy.wait_for_message("/food_name_info", LabelArray)
+        food_size_msg = rospy.wait_for_message("/food_size_info", PoseArray)
         self.lunchbox_info_cb(lbox_msg)
         self.name_info_cb(name_msg)
         self.size_info_cb(food_size_msg)
