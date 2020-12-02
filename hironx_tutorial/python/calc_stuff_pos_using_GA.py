@@ -41,7 +41,7 @@ class StuffFood():
     def __init__(self, name_list, box_list, box_size, like_list, dislike_list, want_to_eat, indivisuals, generation):
         self.indivisuals = indivisuals
         self.generation = generation
-        self.box_size = [box_size[0] - 10, box_size[1] - 10]
+        self.box_size = box_size
         self.want_to_eat = want_to_eat
         self.name_to_index_dict = {}
         for i, food in enumerate(name_list):
@@ -250,8 +250,8 @@ class StuffFood():
             place_row = place_row_lst[count]
             # sort by distance 
             if place_row:
-                place_row.sort(key=lambda x: abs(x[1] - self.box_size[0]))
-                index = np.array(place_row)[:, 0]
+                place_row.sort(key=lambda x: abs(x[1] - (self.box_size[0] / 2)))
+                index = np.array(place_row)[::-1][:, 0]
                 # print("index :", index)
                 order_lst = np.concatenate([order_lst, index])
             count = count * -1 if count < 0 else (count * -1) - 1

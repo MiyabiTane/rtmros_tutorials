@@ -147,18 +147,21 @@
 	  (setq x (float (send rect :x)))
 	  (setq y (float (send rect :y)))
 	  (cond ((< (abs (- (send rect :width) (send rect :height))) 10)
-		 (setq radi 0)) ;;縦横比があまりないものはそのまま
+		 (progn
+		   (setq radi 0) ;;縦横比があまりないものはそのまま
+		   (setq width_ (* (/ (send rect :width) lbox_length) *length*))
+		   (setq height_ (* (/ (send rect :height) lbox_length) *length*))))
 		((> (- (send rect :height) (send rect :width)) 10)
 		 (progn
-		   (send (send rect :width) (send rect :height))
-		   (send (send rect :height) (send rect :width))
-		   (setq radi (atan (/ y x))))
-		 ((> (- (send rect :width) (send rect :height)) 10)
-		  (setq radi (+ (atan (/ y x)) (/ pi 2))))) ;;辺が長い方を掴むように
-		)
-	  (format t "radi ~A~%" radi)
-	  (setq width_ (* (/ (send rect :width) lbox_length) *length*))
-	  (setq height_ (* (/ (send rect :height) lbox_length) *length*)))
+		   (setq width_ (* (/ (send rect :height) lbox_length) *length*))
+		   (setq height_ (* (/ (send rect :width) lbox_length) *length*))
+		   (setq radi (atan (/ y x)))))
+		((> (- (send rect :width) (send rect :height)) 10)
+		 (progn
+		   (setq radi (+ (atan (/ y x)) (/ pi 2))) ;;辺が長い方を掴むように
+		   (setq width_ (* (/ (send rect :width) lbox_length) *length*))
+		   (setq height_ (* (/ (send rect :height) lbox_length) *length*))))))
+      (format t "radi ~A~%" radi)
       (progn
 	(format t "result not found~%")
 	(setq radi 0)
