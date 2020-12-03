@@ -160,7 +160,7 @@
   (setq *left* (- (elt *left-edge* 1) 7))
   (setq *front* (+ (elt *front-edge* 0) 10))
   (setq *width* (- *left* right))
-  (setq *length* (- (- back *front*) 15))
+  (setq *length* (- back *front*))
   (setq *G-y* (/ (+ right *left*) 2))
   (setq *G-x* (/ (+ back *front*) 2))
   (setq l_box (make-cube *length* *width* *height*))
