@@ -6,6 +6,8 @@
 (ros::advertise "/coral_rects_info" jsk_recognition_msgs::RectArray 1)
 (setq *pub-topic* "/xyz_to_screenpoint/input")
 (ros::advertise *pub-topic* geometry_msgs::PointStamped 1)
+(setq *pub-center-topic* "/screenpoint_to_xyz/input")
+(ros::advertise *pub-center-topic* geometry_msgs::PointStamped 1)
 (ros::rate 1)
 
 ;;keep info
@@ -15,6 +17,9 @@
 (setq lbox_length nil)
 (setq radi_list '())
 
+;;init
+(setq pub_msg (instance geometry_msgs::PointStamped :init))
+(setq pub_center_msg (instance geometry_msgs::PointStamped :init))
 
 ;;use tf
 (unless (boundp '*tfl*)
@@ -31,9 +36,8 @@
 
 ;;use xyz_to_screenpoint
 (defun publish-3Dcoords (x y z)
-  (setq pub_msg (instance geometry_msgs::PointStamped :init))
   (setq coords (make-coords :pos (float-vector x y z)))
-  (setq pub-coords (send (send *tfl* :lookup-transform "WAIST" "head_camera_rgb_optical_frame" (ros::time 0))
+  (setq pub-coords (send (send *tfl* :lookup-transform "head_camera_rgb_optical_frame" "WAIST" (ros::time 0))
   			 :transform coords))
   (setq pub-pos (send pub-coords :pos))
   (send (send pub_msg :point) :x (elt pub-pos 0))
@@ -71,12 +75,12 @@
   (setq pub_rects_msg (instance jsk_recognition_msgs::RectArray :init))
   (dotimes (i (length (send pub_msg :rects)))
     (setq got_rect (elt (send pub_msg :rects) i))
-    (setq rect_msg (instance jsk_recognition_msgs::Rect :init))
-    (send rect_msg :x (send got_rect :x))
-    (send rect_msg :y (send got_rect :y))
-    (send rect_msg :width (send got_rect :width))
-    (send rect_msg :height (send got_rect :height))
-    (send pub_rects_msg :rects (append (send pub_rects_msg :rects) (list rect_msg)))
+    (setq r_msg (instance jsk_recognition_msgs::Rect :init))
+    (send r_msg :x (send got_rect :x))
+    (send r_msg :y (send got_rect :y))
+    (send r_msg :width (send got_rect :width))
+    (send r_msg :height (send got_rect :height))
+    (send pub_rects_msg :rects (append (send pub_rects_msg :rects) (list r_msg)))
     )
   (ros::subscribe "/result_of_imageprocessing" jsk_recognition_msgs::RectArray #'imgpro_cb)
   (until got_rects_list
@@ -104,7 +108,7 @@
 	(when (and (and (= (elt b_time 0) (elt c_time 0)) (= (elt b_time 0) (elt r_time 0)))
 		   (and (< (abs (- (elt b_time 1) (elt c_time 1))) 1000)
 			(< (abs (- (elt b_time 1) (elt r_time 1))) 1000)))
-	  (format t "FIND~%")
+	  (format t "FIND ~A ~A ~A~%" i j k)
 	  (setq box_msg (elt b_cb_lst i))
 	  (setq name_msg (elt n_cb_lst j))
 	  (setq rect_msg (elt r_cb_lst k))
@@ -121,26 +125,88 @@
       (progn
 	(setq lbox_bottom (send (send msg :point) :y))
 	(if (not (= lbox_top lbox_bottom))
-	    (setq lbox_length (- lbox_bottom lbox_top))))
+	    (setq lbox_length (+ (- lbox_bottom lbox_top) 10))))
     (setq lbox_top (send (send msg :point) :y))
     )
+  )
+
+(defun screenpoint->world (msg)
+  ;;ros::tf-point->coords *camera-frame*座標を"WAIST"座標に変換
+  (let* ((waist-to-camera (send *tfl* :lookup-transform "WAIST" "head_camera_rgb_optical_frame" (ros::time 0)))
+	 (coords (make-coords :pos (ros::tf-point->pos (send msg :point)))))
+    (send coords :transform waist-to-camera :world)
+    ;;(format t "food coords ~A~%" (send coords :pos))
+    (setq *food-pos* (send coords :pos))
+    *food-pos*))
+
+(defun screenpoint-cb (msg)
+  ;;(setq *screen-offset* #f(-80 -70 0))
+  (setq food-coords (screenpoint->world msg))
+  (setq food-coords (v+ food-coords *screen-offset*))
+  (setq catch-flag t))
+
+(defun find-near-box (pre_pos_list bpos_list)
+  (format t "pre_pos_list ~A~%" pre_pos_list)
+  (format t "bpos_list ~A~%" bpos_list)
+  (dotimes (i (length pre_pos_list))
+    (setq min_dis 10000)
+    (setq pre_pos (elt pre_pos_list i))
+    (dolist (bpos bpos_list) 
+      (setq dis (norm (v- (float-vector (elt pre_pos 0) (elt pre_pos 1)) (float-vector (elt bpos 0) (elt bpos 1)))))
+      (when (< dis min_dis)
+	(setq min_dis dis)
+	(setq cand_pos bpos)))
+    (format t "min_dis ~A~%" min_dis)
+    (setq pos_list (list-insert cand_pos (length pos_list) pos_list))
+    )
+  )
+
+(defun get_food_pos (rects bpos_list)
+  (setq pre_pos_list '())
+  (dotimes (i (length rects))
+    (setq rect (elt rects i))
+    ;;publish
+    (setq x_ (+ (send rect :x) (/ (send rect :width) 2)))
+    (setq y_ (+ (send rect :y) (/ (send rect :height) 2)))
+    (send (send pub_center_msg :point) :x x_)
+    (send (send pub_center_msg :point) :y y_)
+    (send (send pub_center_msg :point) :z 0)
+    (setq catch-flag nil)
+    (ros::subscribe "/screenpoint_to_xyz/output" geometry_msgs::PointStamped #'screenpoint-cb)
+    (until catch-flag
+	   (ros::publish *pub-center-topic* pub_center_msg)
+	   (ros::spin-once)
+	   (ros::sleep))
+    (setq pre_pos_list (list-insert food-coords (length pre_pos_list) pre_pos_list))
+    )
+  (ros::unsubscribe "/screenpoint_to_xyz/output")
+  (find-near-box pre_pos_list bpos_list)
   )
 
 (defun get_list ()
   ;;結果を格納していく
   (setq name_list (send name_msg :label_names))
-  ;;got_rects_listにRGB画像中のおかずの縦横の大きさが格納されている
+  ;;box情報;;To Do
+  (setq bpos_list '())
   (setq boxes (send box_msg :boxes))
   (dotimes (i (length boxes))
     (setq bbox (elt boxes i))
     (setq cascoords (send (send *tfl* :lookup-transform "WAIST" (send bbox :header :frame_id) (ros::time 0))
-				    :transform (ros::tf-pose->coords (send bbox :pose))))
+			  :transform (ros::tf-pose->coords (send bbox :pose))))
     (setq coords (send cascoords :worldpos))
-    ;;(format t "coords ~A~%" coords)
-    (setq pos_list (list-insert coords (length pos_list) pos_list))
-    (setq size (ros::tf-point->pos (send bbox :dimensions)))
+    (setq bpos_list (list-insert coords (length bpos_list) bpos_list))
+    ;;(setq size (ros::tf-point->pos (send bbox :dimensions)))
+    ;;use xyz_to_screenpoint
+    )
+  (setq rects (send rect_msg :rects))
+  (get_food_pos rects bpos_list)
+  (dotimes (i (length name_list))
+    ;;got_rects_listにRGB画像中のおかずの縦横の大きさが格納されている
     ;;おかずの縦横の大きさは画像処理の結果を使う
     (setq rect (elt got_rects_list i))
+    (format t "- - - ~A - - -~%" (elt name_list i))
+    (format t "food-coords ~A~%" (elt pos_list i))
+    ;;(format t "coords, size ~A ~A~%" food-coords size)
     (format t "x, y, width, height ~A ~A ~A ~A~%" (send rect :x) (send rect :y) (send rect :width) (send rect :height))
     (if (not (= (send rect :width) 0))
 	(progn
@@ -160,20 +226,21 @@
 		 (progn
 		   (setq radi (+ (atan (/ y x)) (/ pi 2))) ;;辺が長い方を掴むように
 		   (setq width_ (* (/ (send rect :width) lbox_length) *length*))
-		   (setq height_ (* (/ (send rect :height) lbox_length) *length*))))))
-      (format t "radi ~A~%" radi)
+		   (setq height_ (* (/ (send rect :height) lbox_length) *length*)))))
+	  (format t "radi ~A~%" radi))
       (progn
 	(format t "result not found~%")
 	(setq radi 0)
 	(setq width_ (elt size 0))
 	(setq height_ (elt size 1)))
       )
-    (setq size_list (list width_ height_ (elt size 2)))
+    (setq size-z 25) ;;To Do: use box info
+    (setq size_list (list width_ height_ size-z))
     ;;(format t "size ~A~%" size_list)
     (setq box_list (list-insert size_list (length box_list) box_list))
     (setq radi_list (append radi_list (list radi)))
     )
-  )
+ )
 
 
 (defun main_loop ()
