@@ -248,13 +248,6 @@
     <remap from="~input/camera_info" to="/head_camera/rgb/camera_info"/>
   </node>
 
-  <!-- 2Dpoint->3Dpoint -->
-  <node name="screenpoint_to_xyz"
-        pkg="hironx_tutorial" type="screenpoint_to_xyz.py"
-        output="screen" respawn="true">
-    <remap from="~input/camera_info" to="/head_camera/rgb/camera_info"/>
-  </node>
-
   <!-- get food rects by image procssing -->
   <node name="get_food_size"
         pkg="hironx_tutorial" type="get_food_size.py"
