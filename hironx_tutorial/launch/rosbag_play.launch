@@ -23,11 +23,11 @@
 
   <!-- decompress -->
   <node name="raw_decompress" pkg="image_transport" type="republish"
-        args="compressed in:=$(arg IMAGE_RAW)/compressed out:=$(arg IMAGE_RAW)" />
+        args="compressed in:=$(arg IMAGE_RAW) out:=$(arg IMAGE_RAW)" />
   <node name="rgb_decompress" pkg="image_transport" type="republish"
-        args="compressed in:=$(arg RGB_IMAGE)/compressed out:=$(arg RGB_IMAGE)" />
+        args="compressed in:=$(arg RGB_IMAGE) out:=$(arg RGB_IMAGE)" />
   <node name="depth_decompress" pkg="image_transport" type="republish"
-        args="compressedDepth in:=$(arg DEPTH_RAW)/compressedDepth out:=$(arg DEPTH_RAW)" />
+        args="compressedDepth in:=$(arg DEPTH_RAW) out:=$(arg DEPTH_RAW)" />
   <node pkg="nodelet" type="nodelet" name="point_cloud_xyzrgb"
         args="load depth_image_proc/point_cloud_xyzrgb $(arg manager)" output="screen" >
     <remap from="rgb/camera_info" to="$(arg RGB_CAMERA_INFO)" />
