@@ -155,10 +155,10 @@
   )
 
 (defun box_vis() ;;for debug
-  (setq right (+ (elt *right-edge* 1) 7))
-  (setq back (- (elt *back-edge* 0) 10))
-  (setq *left* (- (elt *left-edge* 1) 7))
-  (setq *front* (+ (elt *front-edge* 0) 10))
+  (setq right (elt *right-edge* 1))
+  (setq back (elt *back-edge* 0))
+  (setq *left* (elt *left-edge* 1))
+  (setq *front* (elt *front-edge* 0))
   (setq *width* (- *left* right))
   (setq *length* (- back *front*))
   (setq *G-y* (/ (+ right *left*) 2))

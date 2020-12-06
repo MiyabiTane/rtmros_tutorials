@@ -15,13 +15,15 @@
 ;;def some poses
 (setq stop-move-flag nil)
 (defun send-robot ()
-  (if (< (elt (send (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords) :pos) 2) -10.0)
+  (setq right-z (elt (send (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords) :pos) 2))
+  (setq left-z (elt (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos) 2))
+  (if (and (> right-z -10) (> left-z 15))
       (progn
-	(format t "DANGER!!~%")
-	(setq stop-move-flag t))
+	(send *ri* :angle-vector (send *hironxjsk* :angle-vector) 2000)
+	(send *ri* :wait-interpolation))
     (progn
-      (send *ri* :angle-vector (send *hironxjsk* :angle-vector) 2000)
-      (send *ri* :wait-interpolation)))
+      (format t "DANGER!!~%")
+      (setq stop-move-flag t)))
   )
 
 (defun send-right-hand (sleep-time)
@@ -57,12 +59,17 @@
 
 ;;move hand out of camera view
 (defun move_hand_out_of_camera ()
-  (init-pose-20201030)
+  (send *hironxjsk* :reset-manip-pose)
+  (send *hironxjsk* :larm_joint4 :joint-angle -35)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
+  (send *hironxjsk* :rarm :move-end-pos #f(50 0 150) :world)
+  (send *hironxjsk* :rarm_joint5 :joint-angle -75)
+  (send *hironxjsk* :rarm_joint3 :joint-angle 35)
+  (send *hironxjsk* :rarm_joint4 :joint-angle 48)
   (send *hironxjsk* :rarm :move-end-pos #f(0 -160 0) :world)
   (send *hironxjsk* :larm :move-end-pos #f(0 200 0))
   (send-robot)
   (send *hironxjsk* :rarm_joint5 :joint-angle -163)
-  (look-73b2-table)
   (send-robot)
   )
 
@@ -77,7 +84,8 @@
 ;;To Do load all file at first
 
 (look-73b2-table)
-(move_hand_out_of_camera)
+(open-hand)
+;;(move_hand_out_of_camera)
 
 ;;get lunchbox position and size
 (load "recognize_lunchbox.l")
