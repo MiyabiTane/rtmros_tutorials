@@ -13,6 +13,15 @@
   (send-robot)
   )
 
+(defun open-chops (size)
+  (setq size_zero #f(-30.449 30.449 30.449 -30.449))
+  (setq size_23 #f(15.449 -15.449 -15.449 15.449))
+  (setq plus (scale (/ size 23.0) size_23))
+  (setq target_hand (v+ size_zero plus))
+  (send *hironxjsk* :hand-angle-vector :lhand target_hand)
+  (send-left-hand 2.0)
+  )
+
 (defun open-tongs (type)
   ;;type 0 -> small object
   ;;type 1 -> big object
@@ -20,7 +29,7 @@
   (cond ((= type 0)
 	 (send *hironxjsk* :hand-angle-vector :rhand #f(15.449 -15.449 -15.449 15.449)))
 	((= type 1)
-	 (send *hironxjsk* :hand-angle-vector :rhand #f(30.449 -30.449 -30.449 30.449)))
+	 (send *hironxjsk* :hand-angle-vector :rhand #f(25.449 -25.449 -25.449 25.449)))
 	((= type 2)
 	 (send *hironxjsk* :hand-angle-vector :rhand #f(10 10 -10 -10)))
 	)
@@ -68,7 +77,10 @@
 (defun catch-food (pos radi)
   ;;same pose 
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
-  (setq pos (v+ pos *tong-offset-catch*)) ;;tong offset
+  (if (= radi 0)
+      (setq pos (v+ pos (v+ *tong-offset* #f(20 0 0)))) ;;tong offset
+    (setq pos (v+ pos (v+ *tong-offset* #f(10 14 0)))) ;;内側め
+    )
   (setq pos (v+ pos (float-vector 0 0 (- *catch-z* (elt pos 2))))) ;;set z *catch-z*
   (setq *move* (v- pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
@@ -94,9 +106,8 @@
   )
 
 (defun pull_over (pos food-size lbox_pos)
-  ;;close-hand
-  (send *hironxjsk* :hand-angle-vector :lhand #f(-10.499 10.499 10.499 -10.499))
-  (send-left-hand 1.0)
+  ;;おかずの大きさに合わせて開く
+  (open-chops (+ (elt food-size 1) 10))
   (send *hironxjsk* :rarm :move-end-pos #f(0 -200 0) :world)
   (send-robot)
   ;;pos GAでの座標 x->x, y->-y
@@ -111,41 +122,38 @@
   (format t "goal_y: ~A center_y: ~A~%" goal_y center_y)
   ;;上下寄せ
   (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
-  (if (< goal_x center_x)
-      (setq start-pos (v+ lbox_pos (float-vector (+ (/ size_x 2) 5) 0 (+ *G-z* 60))))
-    (setq start-pos (v+ lbox_pos (float-vector (- (*  -1 (/ size_x 2)) 5) 0 (+ *G-z* 60)))))
+  (setq start-pos (v+ lbox_pos (float-vector 0 0 (+ *G-z* 60))))
   (setq start-pos (v+ start-pos *chopstick-offset*))
   (setq *move* (v- start-pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
   (send-robot)
   ;;pull-over
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -60) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -70) :world)
   (send-robot)
+  (send *hironxjsk* :hand-angle-vector :lhand (v+ (send *hironxjsk* :hand-angle-vector :lhand) #f(-7 7 7 -7)))
+  (send-left-hand 2.0)
   (send *hironxjsk* :larm :move-end-pos (float-vector (- goal_x center_x) 0 0) :world)
   (cond ((> (- goal_x center_x) 0)
-	 (send *hironxjsk* :larm :move-end-pos #f(10 0 0) :world))
+	 (send *hironxjsk* :larm :move-end-pos #f(5 0 0) :world))
 	((< (- goal_x center_x) 0)
-	 (send *hironxjsk* :larm :move-end-pos #f(-10 0 0) :world)))
+	 (send *hironxjsk* :larm :move-end-pos #f(-5 0 0) :world)))
   (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 60) :world)
+  (open-chops (+ (elt food-size 1) 10))
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 30) :world)
   (send-robot)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -30) :world)
+  (send-robot)
+  (send *hironxjsk* :hand-angle-vector :lhand (v+ (send *hironxjsk* :hand-angle-vector :lhand) #f(-7 7 7 -7)))
+  (send-left-hand 2.0)
   ;;左右寄せ
-  (send *hironxjsk* :hand-angle-vector :lhand #f(-25.449 25.449 25.449 -25.449))
-  (send-left-hand 1.0)
-  (if (< goal_x center_x)
-      (send *hironxjsk* :larm :move-end-pos (float-vector (* -1 (/ size_x 2)) 0 0) :world)
-    (send *hironxjsk* :larm :move-end-pos (float-vector (/ size_x 2) 0 0) :world))
-  (if (< center_y goal_y)
-      (send *hironxjsk* :larm :move-end-pos (float-vector 0 (/ size_y 2) 0) :world)
-    (send *hironxjsk* :larm :move-end-pos (float-vector 0 (* -1 (/ size_y 2)) 0) :world))
-  (send-robot)
-  ;;pull-over
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -75) :world)
-  (send-robot)
   (send *hironxjsk* :larm :move-end-pos (float-vector 0 (- center_y goal_y) 0) :world)
+  (cond ((> (- goal_y center_y) 0)
+	 (send *hironxjsk* :larm :move-end-pos #f(0 -5 0) :world))
+	((< (- goal_y center_y) 0)
+	 (send *hironxjsk* :larm :move-end-pos #f(0 5 0) :world)))
   (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 75) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 70) :world)
   (send-robot)
   )
 
@@ -156,20 +164,20 @@
 (defun place-in ()
   ;;傾ける
   (setq *hiro-coords* (send (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords) :pos))
-  (setq tong-coords (make-cascoords :pos (v- *hiro-coords* *tong-offset-catch*)))
+  (setq tong-coords (make-cascoords :pos (v- *hiro-coords* *tong-offset*)))
   (send (send *hironxjsk* :rarm :end-coords) :assoc tong-coords)
   (setq target-tong-coords (send tong-coords :copy-worldcoords))
   (send target-tong-coords :rotate -170 :x :world)
   (send *hironxjsk* :rarm :inverse-kinematics target-tong-coords :move-target tong-coords)
   ;;(send *hironxjsk* :rarm :move-end-pos #f(-10 0 0) :world)
   (send-robot)
-  (send *hironxjsk* :rarm :move-end-pos #f(0 0 -50) :world)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 -45) :world)
   (send-robot)
   ;;open tongs
   (setq cur_hand (send *ri* :hand-angle-vector :rhand))
   (send *hironxjsk* :hand-angle-vector :rhand (v+ cur_hand #f(10 -10 -10 10)))
   (send-right-hand 1.0)
-  (send *hironxjsk* :rarm :move-end-pos #f(0 0 50) :world)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 45) :world)
   (send-robot)
   ;;元に戻す
   (send target-tong-coords :rotate 170 :x :world)
@@ -200,8 +208,6 @@
 
 (defun catch_and_place_main()
   (setq *tong-offset* #f(-20.23 -114.702 90.2251))
-  ;;(setq *tong-offset-catch* #f(-20.23 -100.000 90.2251)) ;;内側め
-  (setq *tong-offset-catch* #f(-10.23 -100.000 90.2251))
   (setq *chopstick-offset* #f(-12.624 18.437 84.2388))
   (format t "- - - CATCH AND PLACE - - -~%")
   (place-init-pose)
@@ -230,3 +236,8 @@
 
 ;;11/25トング逆向きにした
 ;;#f(-22.0 -114.0 100.161)
+
+;;指の開き方
+;;#f(-15.449 15.449 15.449 -15.449)) -> 2cm
+;;#f(0 0 0 0) -> 4.3cm
+;;#f(15.449 -15.449 -15.449 15.449) -> 6.4cm
