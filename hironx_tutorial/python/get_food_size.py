@@ -13,20 +13,27 @@ TH = 200
 
 class ImageProcessing:
     def __init__(self):
-        self.got_img_flag = False
-        self.got_rects_flag = False
+        self.flag = False
         self.cv_image = None
         self.output_img = None
         self.rects_info = None
         self.header = None
         self.pub_info_list = None
         self.bridge = CvBridge()
+
+        self.pub = rospy.Publisher("/result_of_imageprocessing", RectArray, queue_size=1)
+
+        rospy.Subscriber("/coral_rects_info", RectArray, self.coral_cb)
+        rospy.Subscriber("/head_camera/rgb/image_raw", Image, self.image_cb)
         
     def image_cb(self, msg):
-        print("Img Called")
-        self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-        # cv2.imwrite("/home/tanemoto/Desktop/images/output1118_original_3.png", self.cv_image)
-       
+        if self.flag == True:
+            print("Img Called")
+            self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            self.get_foods_rects()
+            self.publish_result()
+            self.flag = False
+
     def coral_cb(self, msg):
         print("Coral Called")
         self.rects_info = msg.rects
@@ -36,16 +43,9 @@ class ImageProcessing:
         self.output_img = deepcopy(self.cv_image)
         for rect in self.rects_info:
             cv2.rectangle(self.output_img, (rect.x, rect.y), (rect.x + rect.width, rect.y + rect.height), (255,0,0))
-
-    def subscinfo(self):
-        coral_msg = rospy.wait_for_message("/coral_rects_info", RectArray)
-        img_msg = rospy.wait_for_message("/head_camera/rgb/image_raw", Image)  # If this is executed just after camera begins to be subscribed, obtained image is odd
-        self.image_cb(img_msg)
-        self.coral_cb(coral_msg)
+        self.flag = True
 
     def get_foods_rects(self):
-        if not self.rects_info:
-            self.subscinfo()
         # self.cv_image = cv2.imread("/home/tork/Desktop/images/output_color.png")
         black_img = deepcopy(self.cv_image)
         # draw white plate black
@@ -110,19 +110,12 @@ class ImageProcessing:
             pub_msgs.rects.append(pub_msg)
         # visualize result
         cv2.imwrite("/home/tanemoto/Desktop/images/output.png", self.output_img)
-        pub = rospy.Publisher("/result_of_imageprocessing", RectArray, queue_size=1)
-        pub.publish(pub_msgs)
-        while not rospy.is_shutdown():
-            pub.publish(pub_msgs)
-            rospy.sleep(0.1)
+        self.pub.publish(pub_msgs)
 
 
 if __name__ == '__main__':
     rospy.init_node("get_food_rects")
     img_pro = ImageProcessing()
-    img_pro.subscinfo()
-    img_pro.get_foods_rects()
-    img_pro.publish_result()
-
+    rospy.spin()
 
 
