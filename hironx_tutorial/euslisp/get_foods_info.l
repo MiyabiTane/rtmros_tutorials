@@ -8,6 +8,8 @@
 (ros::advertise *pub-topic* geometry_msgs::PointStamped 1)
 (setq *pub-center-topic* "/screenpoint_to_xyz/input")
 (ros::advertise *pub-center-topic* geometry_msgs::PointStamped 1)
+(setq *pub-lbpos-topic* "/lunchbox_positions/input")
+(ros::advertise *pub-lbpos-topic* jsk_recognition_msgs::LineArray 1)
 (ros::rate 1)
 
 ;;keep info
@@ -123,13 +125,42 @@
   )
 
 (defun lbox_size_cb (msg)
-  (if lbox_top
-      (progn
-	(setq lbox_bottom (send (send msg :point) :y))
-	(if (not (= lbox_top lbox_bottom))
-	    (setq lbox_length (+ (- lbox_bottom lbox_top) 10))))
-    (setq lbox_top (send (send msg :point) :y))
-    )
+  (setq lbox_x (send (send msg :point) :x))
+  (setq lbox_y (send (send msg :point) :y))
+  )
+
+(defun sub-lbox-pos (x y z)
+  (setq catch_flag nil)
+  (publish-3Dcoords back right *G-z*)
+  (ros::subscribe "/xyz_to_screenpoint/output" geometry_msgs::PointStamped #'lbox_size_cb)
+  (until catch_flag
+	 (ros::publish *pub-topic* pub_msg)
+	 (ros::spin-once)
+	 (ros::sleep))
+  (ros::unsubscribe "/xyz_to_screenpoint/output")
+  )
+
+(defun pub-lbox-coords ()
+  (setq pub_lbox_msg (instance jsk_recoognition_msgs::LineArray :init))
+  (setq line_msg (instance jsk_recognition_msgs::Line :init))
+  (sub-lbox-pos back left *G-z*)
+  (send line_msg :x1 lbox_x)
+  (send line_msg :y1 lbox_y)
+  (setq ltop (float-vector lbox_x lbox_y))
+  (sub-lbox-pos front left *G-z*)
+  (send line_msg :x1 lbox_x)
+  (send line_msg :y1 lbox_y)
+  (setq lbottom (float-vector lbox_x lbox_y))
+  (send pub_lbox_msg :lines (append (send pub_lbox_msg :lines) (list line_msg)))
+  (sub-lbox-pos back right *G-z*)
+  (send line_msg :x1 lbox_x)
+  (send line_msg :y1 lbox_y)
+  (sub-lbox-pos front right *G-z*)
+  (send line_msg :x1 lbox_x)
+  (send line_msg :y1 lbox_y)
+  (send pub_lbox_msg :lines (append (send pub_lbox_msg :lines) (list line_msg)))
+  (setq lbox_length (norm (v- ltop lbottom)))
+  ;;(ros::publish *pub-lbpos-topic* pub_lbox_msg)
   )
 
 (defun near_box_cb (msg)
@@ -233,19 +264,8 @@
 
 
 (defun main_loop ()
-  (publish-3Dcoords back right *G-z*)
-  (ros::subscribe "/xyz_to_screenpoint/output" geometry_msgs::PointStamped #'lbox_size_cb)
-  (until lbox_top
-	 (ros::publish *pub-topic* pub_msg)
-	 (ros::spin-once)
-	 (ros::sleep))
-  (format t "lbox_top ~A~%" lbox_top)
-  (publish-3Dcoords *front* right *G-z*)
-  (until lbox_length
-	 (ros::publish *pub-topic* pub_msg)
-	 (ros::spin-once)
-	 (ros::sleep))
-  (format t "lbox_bottom ~A~%" lbox_bottom)
+  (pub-lbox-coords)
+  (format t "lbox_length ~A~%" lbox_length)
   (ros::unsubscribe "/xyz_to_screenpoint/output")
   (ros::duration-sleep 1.0)
   (sync_info)
