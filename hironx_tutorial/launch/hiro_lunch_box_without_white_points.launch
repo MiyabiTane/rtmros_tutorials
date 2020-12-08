@@ -217,12 +217,14 @@
     </rosparam>
   </node>
 
+  <!--
   <node name="image_cpi_decomposer_ssd"
         pkg="jsk_perception" type="image_cluster_indices_decomposer.py"
         output="screen" respawn="true">
     <remap from="~input" to="$(arg image)/$(arg image_type)"/>
     <remap from="~input/cluster_indices" to="rects_to_cpi_ssd/output" />
   </node>
+  -->
 
   <node name="segmentation_decomposer_ssd" pkg="nodelet" type="nodelet"
         args="load jsk_pcl/ClusterPointIndicesDecomposer $(arg manager)"
@@ -252,6 +254,12 @@
   <node name="get_food_size"
         pkg="hironx_tutorial" type="get_food_size.py"
         output="screen" respawn="true">
+  </node>
+
+  <!-- get placed position of food by image processing -->
+  <node name="get_placed_pos"
+	pkg="hironx_tutorial" type="get_placed_pos.py"
+	output="screen">
   </node>
 
   <!-- point -> maskd image -->
