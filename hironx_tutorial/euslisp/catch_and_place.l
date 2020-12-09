@@ -1,7 +1,7 @@
 #!/usr/bin/env roseus
 
-(ros::advertise "/place_flag" std_msgs::Bool 1)
-(setq pub_flag_msg (instance std_msgs::Bool :init))
+(ros::advertise "/before_place_img" sensor_msgs::Image 1)
+(ros::advertise "/placed_img" sensor_msgs::Image 1)
 
 (defun place-init-pose ()
   (send *hironxjsk* :reset-manip-pose)
@@ -34,8 +34,7 @@
 	((= type 1)
 	 (send *hironxjsk* :hand-angle-vector :rhand #f(25.449 -25.449 -25.449 25.449)))
 	((= type 2)
-	 (send *hironxjsk* :hand-angle-vector :rhand #f(10 10 -10 -10)))
-	)
+	 (send *hironxjsk* :hand-angle-vector :rhand #f(10 10 -10 -10))))
   (send-right-hand 2.0)
   )
 
@@ -77,12 +76,23 @@
   (send-robot)
   )
 
+(defun sub-img (num)
+  (cond ((= num 0)
+	 (setq *bimg-msg* (one-shot-subscribe "/head_camera/rgb/image_raw"
+					      sensor_msgs::Image
+					      :after-stamp (ros::time-now))))
+	((= num 1)
+	 (setq *aimg-msg* (one-shot-subscribe "/head_camera/rgb/image_raw"
+					      sensor_msgs::Image
+					      :after-stamp (ros::time-now)))))
+  )
+ 
 (defun catch-food (pos radi)
   ;;same pose 
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
   (if (= radi 0)
-      (setq pos (v+ pos (v+ *tong-offset* #f(20 0 0)))) ;;tong offset
-    (setq pos (v+ pos (v+ *tong-offset* #f(10 14 0)))) ;;内側め
+      (setq pos (v+ pos (v+ *tong-offset* #f(10 0 0)))) ;;tong offset
+    (setq pos (v+ pos (v+ *tong-offset* #f(0 14 0)))) ;;内側め
     )
   (setq pos (v+ pos (float-vector 0 0 (- *catch-z* (elt pos 2))))) ;;set z *catch-z*
   (setq *move* (v- pos (send *hiro-pose* :pos)))
@@ -123,10 +133,10 @@
   (format t "goal_y: ~A center_y: ~A~%" goal_y center_y)
   ;;置く時にずれた分
   (setq diff_x (* (/ (elt diff 1) lbox_length) *length*))
-  (setq diff_y (* (/ (* -1 (elt diff 0)) lbox_length) *lebgth*))
+  (setq diff_y (* (/ (* -1 (elt diff 0)) lbox_length) *length*))
   (setq center_x (+ center_x diff_x))
   (setq center_y (+ center_y diff_y))
-  (format t "new center_x: ~A center_y: ~A~%" center_x center_y)
+  (format t "diff_x diff_y ~A ~A~%" diff_x diff_y)
   ;;上下寄せ
   (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
   (setq start-pos (v+ lbox_pos (float-vector 0 0 (+ *G-z* 60))))
@@ -134,6 +144,9 @@
   (setq *move* (v- start-pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
+  (send-robot)
+  ;;ずれの分
+  (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
   (send-robot)
   ;;pull-over
   (send *hironxjsk* :larm :move-end-pos #f(0 0 -70) :world)
@@ -198,7 +211,7 @@
   (setq catch_flag t)
   )
   
-(defun place-food (pos name food-size i)
+(defun place-food (pos name food-size)
   ;;same pose
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
   (setq goal (float-vector (elt pos 0) (* (elt pos 1) -1) (elt pos 2)))
@@ -217,14 +230,17 @@
   ;;手をよけて置かれた位置を認識する
   (send *hironxjsk* :rarm :move-end-pos #f(0 -200 0) :world)
   (send-robot)
-  (send pub_flag_msg :data (* -1 i))
+  (sub-img 1)
   (ros::subscribe "/lunchbox_positions/output" geometry_msgs::Point #'place_cb)
   (setq catch_flag nil)
   (until catch_flag
-	 (ros::publish "place_flag" pub_flag_msg)
+	 (ros::publish "/before_place_img" *bimg-msg*)
+	 (ros::publish "/placed_img" *aimg-msg*)
 	 (ros::spin-once)
 	 (ros::sleep))
+  (ros::unsubscribe "/lunchbox_positions/output")
   (setq diff (v- (float-vector placed_x placed_y) lbox-center))
+  (format t "lbox-center ~A placed_x, placed_y ~A ~A~%" lbox-center placed_x placed_y)
   (pull_over pos food-size lbox_pos diff)
   ;;(push)
   (place-init-pose)
@@ -240,21 +256,18 @@
     (format t "num : ~A~%" num)
     (when (> (elt (elt place_list num) 0) 0)
       (setq target_name (elt name_list num))
-      (format t "target : ~A~%" target_name)
       (setq food-size (elt box_list num))
-      (if (or (> (elt food-size 0) 30) (> (elt food-size 1) 30))
+      (format t "target : ~A~%" target_name)
+      (format t "size : ~A place : ~A~%" food-size (elt place_list num))
+      (if (or (> (elt food-size 0) 35) (> (elt food-size 1) 35))
 	  (progn
-	    (if (or (> (elt food-size 0) 40) (> (elt food-size 1) 40))
+	    (if (or (> (elt food-size 0) 45) (> (elt food-size 1) 45))
 		(open-tongs 2)
 	      (open-tongs 1)))
 	(open-tongs 0))
-      (send pub_flag_msg :data i)
-      (dotimes (i 100000000)
-	(ros::publish "/place_flag" pub_flag_msg)
-	(ros::spin-once)
-	(ros::sleep))
+      (sub-img 0)
       (catch-food (elt pos_list num) (elt radi_list num))
-      (place-food (elt place_list num) target_name food-size i)
+      (place-food (elt place_list num) target_name food-size)
       )
     )
   )
