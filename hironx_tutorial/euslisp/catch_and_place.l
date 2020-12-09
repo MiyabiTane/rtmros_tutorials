@@ -1,5 +1,8 @@
 #!/usr/bin/env roseus
 
+(ros::advertise "/place_flag" std_msgs::Bool 1)
+(setq pub_flag_msg (instance std_msgs::Bool :init))
+
 (defun place-init-pose ()
   (send *hironxjsk* :reset-manip-pose)
   (send *hironxjsk* :larm_joint4 :joint-angle -35)
@@ -105,11 +108,9 @@
   (send-robot)
   )
 
-(defun pull_over (pos food-size lbox_pos)
+(defun pull_over (pos food-size lbox_pos diff)
   ;;おかずの大きさに合わせて開く
   (open-chops (+ (elt food-size 1) 10))
-  (send *hironxjsk* :rarm :move-end-pos #f(0 -200 0) :world)
-  (send-robot)
   ;;pos GAでの座標 x->x, y->-y
   ;;おかずはお弁当箱の真ん中に置かれる
   (setq goal_x (elt pos 0))
@@ -120,6 +121,12 @@
   (setq size_y (elt food-size 1))
   (format t "goal_x: ~A center_x: ~A~%" goal_x center_x)
   (format t "goal_y: ~A center_y: ~A~%" goal_y center_y)
+  ;;置く時にずれた分
+  (setq diff_x (* (/ (elt diff 1) lbox_length) *length*))
+  (setq diff_y (* (/ (* -1 (elt diff 0)) lbox_length) *lebgth*))
+  (setq center_x (+ center_x diff_x))
+  (setq center_y (+ center_y diff_y))
+  (format t "new center_x: ~A center_y: ~A~%" center_x center_y)
   ;;上下寄せ
   (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
   (setq start-pos (v+ lbox_pos (float-vector 0 0 (+ *G-z* 60))))
@@ -184,8 +191,14 @@
   (send *hironxjsk* :rarm :inverse-kinematics target-tong-coords :move-target tong-coords)
   (send-robot)
   )
+
+(defun place_cb (msg)
+  (setq placed_x (send msg :x))
+  (setq placed_y (send msg :y))
+  (setq catch_flag t)
+  )
   
-(defun place-food (pos name food-size)
+(defun place-food (pos name food-size i)
   ;;same pose
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
   (setq goal (float-vector (elt pos 0) (* (elt pos 1) -1) (elt pos 2)))
@@ -201,7 +214,18 @@
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 80) :world)
   (send-robot)
   (place-in)
-  (pull_over pos food-size lbox_pos)
+  ;;手をよけて置かれた位置を認識する
+  (send *hironxjsk* :rarm :move-end-pos #f(0 -200 0) :world)
+  (send-robot)
+  (send pub_flag_msg :data (* -1 i))
+  (ros::subscribe "/lunchbox_positions/output" geometry_msgs::Point #'place_cb)
+  (setq catch_flag nil)
+  (until catch_flag
+	 (ros::publish "place_flag" pub_flag_msg)
+	 (ros::spin-once)
+	 (ros::sleep))
+  (setq diff (v- (float-vector placed_x placed_y) lbox-center))
+  (pull_over pos food-size lbox_pos diff)
   ;;(push)
   (place-init-pose)
   )
@@ -224,8 +248,13 @@
 		(open-tongs 2)
 	      (open-tongs 1)))
 	(open-tongs 0))
+      (send pub_flag_msg :data i)
+      (dotimes (i 100000000)
+	(ros::publish "/place_flag" pub_flag_msg)
+	(ros::spin-once)
+	(ros::sleep))
       (catch-food (elt pos_list num) (elt radi_list num))
-      (place-food (elt place_list num) target_name food-size)
+      (place-food (elt place_list num) target_name food-size i)
       )
     )
   )

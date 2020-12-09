@@ -97,6 +97,7 @@
   (ros::subscribe "/edgetpu_boxes_synchronizer/pub_01" jsk_recognition_msgs::BoundingBoxArray #'get_box_cb)
   (ros::subscribe "/edgetpu_boxes_synchronizer/pub_02" jsk_recognition_msgs::RectArray #'get_rects_cb)
   (while (not (and (and rect_msg box_msg) name_msg))
+    (ros::publish *pub-lbpos-topic* pub_lbox_msg) ;;catch_and_placeで使う情報を送っておく
     (ros::spin-once)
     (ros::sleep)
     )
@@ -160,6 +161,7 @@
   (send line_msg :y1 lbox_y)
   (send pub_lbox_msg :lines (append (send pub_lbox_msg :lines) (list line_msg)))
   (setq lbox_length (norm (v- ltop lbottom)))
+  (setq lbox-center (scale (/ 1 4) (v+ (v+ (v+ ltop lbottom) rtop) rbottom)))
   ;;(ros::publish *pub-lbpos-topic* pub_lbox_msg)
   )
 
@@ -266,8 +268,6 @@
 (defun main_loop ()
   (pub-lbox-coords)
   (format t "lbox_length ~A~%" lbox_length)
-  (ros::unsubscribe "/xyz_to_screenpoint/output")
-  (ros::duration-sleep 1.0)
   (sync_info)
   )
 
