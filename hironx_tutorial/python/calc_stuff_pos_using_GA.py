@@ -21,7 +21,8 @@ from std_msgs.msg import Int16MultiArray
 import hiro_talk
 import cv2
 
-SAVE_NAME = "output1128.png"
+SAVE_NAME = "/home/tanemoto/Desktop/images/place_output.png"
+ORDER_SAVE_NAME = "/home/tanemoto/Desktop/images/order_output.png"
 
 """
 x: width, y: height
@@ -108,7 +109,7 @@ class StuffFood():
                 if stuff_pos[i][0] + self.box_dict[i][0] > self.box_size[0] or stuff_pos[i][1] + self.box_dict[i][1] > self.box_size[1]:
                     point -= 1
                     if self.name_list[i] in self.want_to_eat:
-                        point -= 2
+                        point -= 1
             points.append(point)
         #for_choose_parameter
         #print(points)
@@ -336,7 +337,7 @@ def main():
         pose_msg.poses.append(pose)
     # calc place order and publish
     order_lst = stuff.calc_place_order(box_list, best_stuff)
-    stuff.visualize_place_order(SAVE_NAME, "order_" + SAVE_NAME, best_stuff, order_lst)
+    stuff.visualize_place_order(SAVE_NAME, ORDER_SAVE_NAME, best_stuff, order_lst)
     pub2 = rospy.Publisher('/stuff_order', Int16MultiArray, queue_size = 1)
     order_msg = Int16MultiArray()
     order_msg.data = order_lst

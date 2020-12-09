@@ -33,17 +33,20 @@ class ImageProcessing:
             self.get_foods_rects()
             self.publish_result()
             self.flag = False
+            self.rects_info = None
+            self.output_img = None
 
     def coral_cb(self, msg):
-        print("Coral Called")
-        self.rects_info = msg.rects
-        self.header = msg.header
-        self.pub_info_list = [[]] * len(self.rects_info)
-        # draw coral result
-        self.output_img = deepcopy(self.cv_image)
-        for rect in self.rects_info:
-            cv2.rectangle(self.output_img, (rect.x, rect.y), (rect.x + rect.width, rect.y + rect.height), (255,0,0))
-        self.flag = True
+        if not self.rects_info:
+            print("Coral Called")
+            self.rects_info = msg.rects
+            self.header = msg.header
+            self.pub_info_list = [[]] * len(self.rects_info)
+            # draw coral result
+            self.output_img = deepcopy(self.cv_image)
+            for rect in self.rects_info:
+                cv2.rectangle(self.output_img, (rect.x, rect.y), (rect.x + rect.width, rect.y + rect.height), (255,0,0))
+            self.flag = True
 
     def get_foods_rects(self):
         # self.cv_image = cv2.imread("/home/tork/Desktop/images/output_color.png")

@@ -19,7 +19,7 @@
 ;;(setq *width* 20.6)
 
 (defun flag_cb(msg)
-  (format t "Called")
+  ;;(format t "Called~%")
   (if (eql (send msg :data) 1)
       (setq finish_flag t)
     )
