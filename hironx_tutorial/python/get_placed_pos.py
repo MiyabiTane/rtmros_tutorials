@@ -11,7 +11,9 @@ import numpy as np
 from copy import deepcopy
 
 TH = 50
-
+X_OFFSET = 0
+Y_OFFSET = -20
+EXTENTION = 0
 
 class VisualFeedback:
 
@@ -53,6 +55,8 @@ class VisualFeedback:
         rinfo = msg.lines[1]
         self.ltop_x = linfo.x1; self.ltop_y = linfo.y1; self.lbottom_x = linfo.x2; self.lbottom_y = linfo.y2
         self.rtop_x = rinfo.x1; self.rtop_y = rinfo.y1; self.rbottom_x = rinfo.x2; self.rbottom_y = rinfo.y2
+        self.ltop_x += X_OFFSET; self.lbottom_x += X_OFFSET; self.rtop_x += X_OFFSET; self.rbottom_x += X_OFFSET
+        self.ltop_y += Y_OFFSET; self.lbottom_y += Y_OFFSET; self.rtop_y += Y_OFFSET; self.rbottom_y += Y_OFFSET
 
     def get_food_pos(self, before_img, after_img):
         im_diff = before_img.astype(int) - after_img.astype(int)
@@ -60,7 +64,7 @@ class VisualFeedback:
         im_diff_abs[np.where(im_diff_abs[:,:,0] < TH) and np.where(im_diff_abs[:,:,1] < TH) and np.where(im_diff_abs[:,:,2] < TH)] = [0, 0, 0]
         # cv2.imwrite("/home/tork/Downloads/diff_.png", im_diff_abs)
         where = np.where(im_diff_abs != [0, 0, 0])
-        if len(where[0]) < 10:
+        if len(where[0]) < 50:
             return None, None
         pos_x = (np.min(where[1]) + np.max(where[1])) / 2
         pos_y = (np.min(where[0]) + np.max(where[0])) / 2
@@ -72,10 +76,10 @@ class VisualFeedback:
         cv2.line(self.output_img, (int(self.ltop_x), int(self.ltop_y)), (int(self.rtop_x), int(self.rtop_y)), (0, 255, 0), thickness=2, lineType=cv2.LINE_4)
         cv2.line(self.output_img, (int(self.ltop_x), int(self.ltop_y)), (int(self.lbottom_x), int(self.lbottom_y)), (0, 255, 0), thickness=2, lineType=cv2.LINE_4)
         cv2.line(self.output_img, (int(self.lbottom_x), int(self.lbottom_y)), (int(self.rbottom_x), int(self.rbottom_y)), (0, 255, 0), thickness=2, lineType=cv2.LINE_4)
-        top = int((self.ltop_y + self.rtop_y) / 2 - 20)
-        bottom = int((self.lbottom_y + self.rbottom_y) / 2 + 20)
-        left = int((self.ltop_x + self.lbottom_x) / 2 - 20)
-        right = int((self.rtop_x + self.rbottom_x) / 2 + 20)
+        top = int((self.ltop_y + self.rtop_y) / 2 - EXTENTION)
+        bottom = int((self.lbottom_y + self.rbottom_y) / 2 + EXTENTION)
+        left = int((self.ltop_x + self.lbottom_x) / 2 - EXTENTION)
+        right = int((self.rtop_x + self.rbottom_x) / 2 + EXTENTION)
         lbox_bimg = self.before_img[top: bottom, left: right, :]
         lbox_aimg = self.after_img[top: bottom, left: right, :]
         pos_x, pos_y = self.get_food_pos(lbox_bimg, lbox_aimg)
@@ -85,9 +89,12 @@ class VisualFeedback:
         else:
             pos_x = 0
             pos_y = 0
-        cv2.drawMarker(self.output_img, (int(pos_x), int(pos_y)), (0, 0, 255), markerType=cv2.MARKER_STAR, markerSize=10)
+        cv2.drawMarker(self.output_img, (int(pos_x), int(pos_y)), (0, 0, 255), markerType=cv2.MARKER_STAR, markerSize=20)
         cv2.imwrite("/home/tanemoto/Desktop/images/output_" + str(self.count) + ".png", self.output_img)
         # publish
+        if pos_x:
+            pos_x -= (left + right) / 2
+            pos_y -= (top + bottom) / 2
         pub_msg = Point()
         pub_msg.x = pos_x
         pub_msg.y = pos_y
