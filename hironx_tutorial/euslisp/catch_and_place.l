@@ -25,6 +25,23 @@
   (send-left-hand 2.0)
   )
 
+(defun close-chops ()
+  (setq close #f(-5 5 5 -5))
+  (setq diff 0)
+  (while (< diff 2.0)
+    (setq prev_hand (send *ri* :hand-angle-vector :lhand))
+    (send *hironxjsk* :hand-angle-vector :lhand (v+ prev_hand close))
+    (send-left-hand 2.0)
+    (setq cur_hand (send *ri* :hand-angle-vector :lhand))
+    (setq diff (norm (v- (v- cur_hand prev_hand) close)))
+    ;;(format t "diff ~A~%" diff)
+    (when (< (elt (send *hironxjsk* :hand-angle-vector :lhand) 0) -25.1)
+      (format t "enough~%")
+      (setq diff 4))
+    )
+  (format t "diff ~A~%" diff)
+  )
+
 (defun open-tongs (type)
   ;;type 0 -> small object
   ;;type 1 -> big object
@@ -92,7 +109,7 @@
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
   (if (= radi 0)
       (setq pos (v+ pos (v+ *tong-offset* #f(10 0 0)))) ;;tong offset
-    (setq pos (v+ pos (v+ *tong-offset* #f(0 14 0)))) ;;内側め
+    (setq pos (v+ pos (v+ *tong-offset* #f(0 10 0)))) ;;内側め
     )
   (setq pos (v+ pos (float-vector 0 0 (- *catch-z* (elt pos 2))))) ;;set z *catch-z*
   (setq *move* (v- pos (send *hiro-pose* :pos)))
@@ -118,7 +135,7 @@
   (send-robot)
   )
 
-(defun pull_over (pos food-size lbox_pos diff)
+(defun pull_over (pos food-size lbox_pos diff_2D_x diff_2D_y)
   ;;おかずの大きさに合わせて開く
   (open-chops (+ (elt food-size 1) 10))
   ;;pos GAでの座標 x->x, y->-y
@@ -132,8 +149,8 @@
   (format t "goal_x: ~A center_x: ~A~%" goal_x center_x)
   (format t "goal_y: ~A center_y: ~A~%" goal_y center_y)
   ;;置く時にずれた分
-  (setq diff_x (* (/ (elt diff 1) lbox_length) *length*))
-  (setq diff_y (* (/ (* -1 (elt diff 0)) lbox_length) *length*))
+  (setq diff_x (* (/ (* -1 diff_2D_y) lbox_length) *length*))
+  (setq diff_y (* (/ (* -1 diff_2D_x) lbox_length) *length*))
   (setq center_x (+ center_x diff_x))
   (setq center_y (+ center_y diff_y))
   (format t "diff_x diff_y ~A ~A~%" diff_x diff_y)
@@ -151,14 +168,14 @@
   ;;pull-over
   (send *hironxjsk* :larm :move-end-pos #f(0 0 -70) :world)
   (send-robot)
-  (send *hironxjsk* :hand-angle-vector :lhand (v+ (send *hironxjsk* :hand-angle-vector :lhand) #f(-7 7 7 -7)))
-  (send-left-hand 2.0)
+  (close-chops)
   (send *hironxjsk* :larm :move-end-pos (float-vector (- goal_x center_x) 0 0) :world)
   (cond ((> (- goal_x center_x) 0)
 	 (send *hironxjsk* :larm :move-end-pos #f(5 0 0) :world))
 	((< (- goal_x center_x) 0)
 	 (send *hironxjsk* :larm :move-end-pos #f(-5 0 0) :world)))
   (send-robot)
+  #|
   (open-chops (+ (elt food-size 1) 10))
   (send *hironxjsk* :larm :move-end-pos #f(0 0 30) :world)
   (send-robot)
@@ -166,6 +183,7 @@
   (send-robot)
   (send *hironxjsk* :hand-angle-vector :lhand (v+ (send *hironxjsk* :hand-angle-vector :lhand) #f(-7 7 7 -7)))
   (send-left-hand 2.0)
+  |#
   ;;左右寄せ
   (send *hironxjsk* :larm :move-end-pos (float-vector 0 (- center_y goal_y) 0) :world)
   (cond ((> (- goal_y center_y) 0)
@@ -173,6 +191,9 @@
 	((< (- goal_y center_y) 0)
 	 (send *hironxjsk* :larm :move-end-pos #f(0 5 0) :world)))
   (send-robot)
+  ;;open chopsticks
+  (send *hironxjsk* :hand-angle-vector :lhand (v+ (send *ri* :hand-angle-vector :lhand) #f(5 -5 -5 5)))
+  (send-left-hand 1.0)
   (send *hironxjsk* :larm :move-end-pos #f(0 0 70) :world)
   (send-robot)
   )
@@ -180,6 +201,21 @@
 ;;(defun push ()
   ;;To Do
 ;;  )
+
+(defun drag ()
+  (setq cur_hand (send *ri* :hand-angle-vector :rhand))
+  (send *hironxjsk* :hand-angle-vector :rhand (v+ cur_hand #f(15 -15 -15 15)))
+  (send-right-hand 2.0)
+  ;;他のおかずに乗っかっている時
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 10) :world)
+  (send-robot)
+  (send *hironxjsk* :hand-angle-vector :rhand (v+ cur_hand #f(5 -5 -5 5)))
+  (send-right-hand 2.0)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 -20 0) :world)
+  (send-robot)
+  (send *hironxjsk* :hand-angle-vector :rhand (v+ cur_hand #f(15 -15 -15 15)))
+  (send-right-hand 2.0)
+  )
 
 (defun place-in ()
   ;;傾ける
@@ -193,10 +229,8 @@
   (send-robot)
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 -45) :world)
   (send-robot)
-  ;;open tongs
-  (setq cur_hand (send *ri* :hand-angle-vector :rhand))
-  (send *hironxjsk* :hand-angle-vector :rhand (v+ cur_hand #f(10 -10 -10 10)))
-  (send-right-hand 1.0)
+  ;;おかずが重ならないように置く
+  (drag)
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 45) :world)
   (send-robot)
   ;;元に戻す
@@ -206,8 +240,8 @@
   )
 
 (defun place_cb (msg)
-  (setq placed_x (send msg :x))
-  (setq placed_y (send msg :y))
+  (setq diff_2D_x (send msg :x))
+  (setq diff_2D_y (send msg :y))
   (setq catch_flag t)
   )
   
@@ -239,9 +273,9 @@
 	 (ros::spin-once)
 	 (ros::sleep))
   (ros::unsubscribe "/lunchbox_positions/output")
-  (setq diff (v- (float-vector placed_x placed_y) lbox-center))
-  (format t "lbox-center ~A placed_x, placed_y ~A ~A~%" lbox-center placed_x placed_y)
-  (pull_over pos food-size lbox_pos diff)
+  (format t "diff_x diff_y ~A ~A~%" diff_2D_x diff_2D_y)
+  (if (not (= diff_2D_x 0))
+      (pull_over pos food-size lbox_pos diff_2D_x diff_2D_y))
   ;;(push)
   (place-init-pose)
   )
