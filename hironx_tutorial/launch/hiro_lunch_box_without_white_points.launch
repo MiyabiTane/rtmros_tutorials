@@ -259,7 +259,7 @@
   <!-- get placed position of food by image processing -->
   <node name="get_placed_pos"
 	pkg="hironx_tutorial" type="get_placed_pos.py"
-	output="screen">
+	output="screen" respawn="true">
   </node>
 
   <!-- point -> maskd image -->

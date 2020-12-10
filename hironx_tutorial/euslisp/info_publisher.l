@@ -30,8 +30,8 @@
   (setq pub_box_msg (instance jsk_recognition_msgs::Rect :init))
   (send pub_box_msg :x (round *front*))
   (send pub_box_msg :y (round *left*))
-  (send pub_box_msg :width (round *length*))
-  (send pub_box_msg :height (round *width*))
+  (send pub_box_msg :width (round (+ *length* 10)))
+  (send pub_box_msg :height (round (+ *width* 10)))
   
   (setq pub_food_msg (instance geometry_msgs::PoseArray :init))
   (dotimes (i (length box_list))
