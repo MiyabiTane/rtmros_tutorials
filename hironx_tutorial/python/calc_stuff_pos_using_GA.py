@@ -39,9 +39,10 @@ class StuffFood():
     sample output:
         best_stuff = [(6.0, 1.0), (2.0, 6.0), (2.0, 2.0), (1.5, 9.5), (9.0, 3.0), (8.0, 10.0), (6.0, 3.0), (6.0, 6.0), (9.0, 1.0), (4.5, 9.5)]
     """
-    def __init__(self, name_list, box_list, box_size, like_list, dislike_list, want_to_eat, indivisuals, generation):
+    def __init__(self, name_list, box_list, box_size, like_list, dislike_list, want_to_eat, indivisuals, generation, elite):
         self.indivisuals = indivisuals
         self.generation = generation
+        self.elite = elite
         self.box_size = box_size
         self.want_to_eat = want_to_eat
         self.name_to_index_dict = {}
@@ -146,8 +147,9 @@ class StuffFood():
     def generate_next_generation(self):
     #update self.cand_list    
         points, max_point = self.evaluate()
+        print(max_point)
         copy = deepcopy(self.cand_list)
-        for i in range(self.indivisuals//2):
+        for i in range((self.indivisuals - self.elite)//2):
             index_1, index_2 = np.random.choice(len(points), 2, replace = True, p = points)
             #print(index_1, index_2)
             parent_1 = self.cand_list[index_1]
@@ -155,6 +157,10 @@ class StuffFood():
             child_1, child_2 = self.partial_crossover(parent_1, parent_2)
             copy[2*i] = child_1
             copy[2*i + 1] = child_2
+        # inherit high point parents
+        elite_parent_index = np.argsort(points)
+        for i in range(self.indivisuals - self.elite, self.indivisuals):
+            copy[i] = self.cand_list[elite_parent_index[i]]
         self.cand_list = deepcopy(copy)
         _, cur_point, _ = self.best_keeper
         if max_point >= cur_point:
@@ -319,12 +325,9 @@ def main():
     print(name_list)
     print(box_size)
     #subscribe info from talking
-    # like_list, dislike_list, want_to_eat = get_talk_info(name_list)
-    like_list = [["rolled_egg", "tomato"]]
-    dislike_list = [["tomato", "tomato"]]
-    want_to_eat = [["rolled_egg"]]
+    like_list, dislike_list, want_to_eat = get_talk_info(name_list)
     #calc stuff pos using GA and BL
-    stuff = StuffFood(name_list, box_list, box_size, like_list, dislike_list, want_to_eat, 12, 1000)
+    stuff = StuffFood(name_list, box_list, box_size, like_list, dislike_list, want_to_eat, 20, 200, 6)
     best_stuff, _ = stuff.GA_main()
     #publish stuff canter coords and box width and height
     pub = rospy.Publisher('/stuff_food_pos', PoseArray, queue_size = 1)
