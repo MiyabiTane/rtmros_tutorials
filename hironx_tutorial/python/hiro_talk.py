@@ -8,6 +8,8 @@ from sound_play.libsoundplay import SoundClient
 import random
 import openpyxl
 
+WB_PATH = "/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx"
+
 class RememberInfo:
     # 今はあらかじめ書いてあるおかずだけ
     # like : 1, dislike : 0
@@ -58,18 +60,37 @@ class RememberInfo:
             self.sheet.cell(row = self.N+2, column = index, value = 'T')
         self.wb.save(self.wb_name)
 
+    def check_if_known(self, food1, food2):
+        print("- - - check - - -")
+        index_1 = self.foods.index(food1)
+        index_2 = self.foods.index(food2)
+        row_index = min(index_1, index_2) + 1
+        col_index = max(index_1, index_2) + 1
+        if self.values[row_index][col_index] == 1:
+            print("known that [{}, {}] in like_list".format(food1, food2))
+            ans = "like"
+        elif self.values[index_1 + 1][index_2 + 1] == 0:
+            print("known that [{}, {}] in dislike_list".format(food1, food2))
+            ans = "dislike"
+        else:
+            print("don't have info of [{}, {}]".format(food1, food2))
+            ans = "unknown"
+        print("- - -")
+        return ans
+
+
 class TalkWith:
     
     def __init__(self):
         self.cb_flag = False
         self.voice = "" 
-        self.volume = 0.4
+        self.volume = 0.1 # 0.4
         self.str_candidate = ''
         self.like_list = []
         self.dislike_list = []
         self.want_to_eat = []
-        #rospy.init_node('hiro_talk')
         self.soundhandle = SoundClient(sound_action='robotsound_jp', sound_topic='robotsound_jp')
+        self.init_say_flag = True
         rospy.sleep(1.0)
 
     def talk_cb(self, msg):  
@@ -132,45 +153,81 @@ class TalkWith:
 
         for food in food_for_judge:
             f1 = food[0]; f2 = food[1]
-            f1_ = self.convertEtoJ(f1); f2_ = self.convertEtoJ(f2)
-            s = f1_ + "と" + f2_ + "は隣で良いですか？"
-            #s = "Is it good that " + f1.replace('_',' ') + " and " + f2.replace('_',' ') + " are next to each other?"
-            rospy.loginfo('Saying: %s' % s)
-            self.soundhandle.say(s, self.voice, self.volume)
-            
-            while True:
-                self.str_candidate = ""
-                self.cb_flag = True
-                while self.cb_flag:
-                    self.sub = rospy.Subscriber('/speech_to_text', SpeechRecognitionCandidates, self.talk_cb)
-                    rospy.sleep(0.5)
-                if "はい" in self.str_candidate:
-                    self.like_list.append([f1, f2])
-                    break
-                elif "いいえ" in self.str_candidate:
-                    self.dislike_list.append([f1, f2])
-                    break
-                s = "すみません、もう一度お願いします。"
-                #s = "Could you repeat that please?"
+            rem = RememberInfo(WB_PATH)
+            memory = rem.check_if_known(f1, f2)
+            if memory == "like":
+                self.like_list.append([f1, f2])
+            elif memory == "dislike":
+                self.dislike_list.append([f1, f2])
+            else:
+                if self.init_say_flag:
+                    s = "次の質問に、はい、か、いいえで、答えてください"
+                    rospy.loginfo('Saying: %s' % s)
+                    self.soundhandle.say(s, self.voice, self.volume)
+                    rospy.sleep(6.0)
+                f1_ = self.convertEtoJ(f1); f2_ = self.convertEtoJ(f2)
+                s = f1_ + "と" + f2_ + "は隣に置いても良いですか？"
+                #s = "Is it good that " + f1.replace('_',' ') + " and " + f2.replace('_',' ') + " are next to each other?"
                 rospy.loginfo('Saying: %s' % s)
                 self.soundhandle.say(s, self.voice, self.volume)
+                self.init_say_flag = False
+
+                while True:
+                    self.str_candidate = ""
+                    self.cb_flag = True
+                    while self.cb_flag:
+                        self.sub = rospy.Subscriber('/speech_to_text', SpeechRecognitionCandidates, self.talk_cb)
+                        rospy.sleep(0.5)
+                    if "はい" in self.str_candidate:
+                        self.like_list.append([f1, f2])
+                        break
+                    elif "いいえ" in self.str_candidate:
+                        self.dislike_list.append([f1, f2])
+                        break
+                    s = "すみません、もう一度お願いします。"
+                    #s = "Could you repeat that please?"
+                    rospy.loginfo('Saying: %s' % s)
+                    self.soundhandle.say(s, self.voice, self.volume)
         print(self.like_list, self.dislike_list)
 
         s = "絶対に入れてほしいおかずをひとつずつ教えてください"
         #s = "Please tell me one side dish you want to eat at a time."
         rospy.loginfo('Saying: %s' % s)
         self.soundhandle.say(s, self.voice, self.volume)
+        self.cb_flag = True
+        self.str_candidate = ""
+        while self.cb_flag:
+            #print(self.cb_flag)
+            self.sub = rospy.Subscriber('/speech_to_text', SpeechRecognitionCandidates, self.talk_cb)
+            rospy.sleep(0.5)
         while True:
-            self.cb_flag = True
-            self.str_candidate = ""
-            while self.cb_flag:
-                #print(self.cb_flag)
-                self.sub = rospy.Subscriber('/speech_to_text', SpeechRecognitionCandidates, self.talk_cb)
-                rospy.sleep(0.5)
             if  self.convertJtoE(self.str_candidate) in name_list:
                 self.want_to_eat.append(self.convertJtoE(self.str_candidate))
-                s = self.str_candidate + "ですね、分かりました。他にはありますか？"
+                s = self.str_candidate + "ですね、分かりました。他にはありますか？あれば教えてください。"
                 #s = "You want to eat " + self.convertJtoE(self.str_candidate).replace('_',' ') + " right?"
+                rospy.loginfo('Saying: %s' % s)
+                self.soundhandle.say(s, self.voice, self.volume)
+
+                self.cb_flag = True
+                self.str_candidate = ""
+                while self.cb_flag:
+                    self.sub = rospy.Subscriber('/speech_to_text', SpeechRecognitionCandidates, self.talk_cb)
+                    rospy.sleep(0.5)
+                if "ない" in self.str_candidate or "ありません" in self.str_candidate:
+                    s = "了解しました"
+                    rospy.loginfo('Saying: %s' % s)
+                    self.soundhandle.say(s, self.voice, self.volume)
+                    break
+                else:
+                    continue
+            elif "ない" in self.str_candidate or "ありません" in self.str_candidate:
+                s = "了解しました"
+                rospy.loginfo('Saying: %s' % s)
+                self.soundhandle.say(s, self.voice, self.volume)
+                break
+            else:
+                s = "すみません、それを用意することはできません、もう一度お願いします。"
+                #s = "I am sorry, I cannot prepare it. Is there anything else?"
                 rospy.loginfo('Saying: %s' % s)
                 self.soundhandle.say(s, self.voice, self.volume)
                 self.cb_flag = True
@@ -178,38 +235,11 @@ class TalkWith:
                 while self.cb_flag:
                     self.sub = rospy.Subscriber('/speech_to_text', SpeechRecognitionCandidates, self.talk_cb)
                     rospy.sleep(0.5)
-                if "はい" in self.str_candidate:
-                    s = "OK. Is there anything else?"
-                    rospy.loginfo('Saying: %s' % s)
-                    self.soundhandle.say(s, self.voice, self.volume)
-                elif "いいえ" in self.str_candidate:
-                    #s = "Could you repeat the food's name please?"
-                    s = "食べ物の名前をもう一度教えてください"
-                    rospy.loginfo('Saying: %s' % s)
-                    self.soundhandle.say(s, self.voice, self.volume)
-                else:
-                    #s = "Could you repeat that please?"
-                    s = "もう一度おねがいします。"
-                    rospy.loginfo('Saying: %s' % s)
-                    self.soundhandle.say(s, self.voice, self.volume)
-            elif "ありません" in self.str_candidate or "ない" in self.str_candidate or "いいえ"in self.str_candidate:
-                s = "了解しました。"
-                #s = "OK, I understand. Thank you."
-                rospy.loginfo('Saying: %s' % s)
-                self.soundhandle.say(s, self.voice, self.volume)
-                self.sub.unregister()
-                break
-            else:
-                s = "すみません、それを用意することはできません、もう一度お願いします。"
-                #s = "I am sorry, I cannot prepare it. Is there anything else?"
-                rospy.loginfo('Saying: %s' % s)
-                self.soundhandle.say(s, self.voice, self.volume)
-        
+
         # 過去の記憶を使う
-        # To Do 重複質問をなくす
-        rem = RememberInfo("/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx")
+        rem = RememberInfo(WB_PATH)
         rem.update_info(self.like_list, self.dislike_list, self.want_to_eat)
-        rem = RememberInfo("/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx")
+        rem = RememberInfo(WB_PATH)
         new_like, new_dislike, new_want = rem.get_past_info()
         print(new_like)
         print(new_dislike)
@@ -217,10 +247,11 @@ class TalkWith:
         return new_like, new_dislike, new_want
 
 #talk
-#if __name__=='__main__':
-#name_list = ["rolled_egg", "fried_chicken", "broccoli", "tomato", "octopus_wiener", "fried_chicken", "rolled_egg", "broccoli", "octopus_wiener", "tomato"]
-#    hiro_talk = TalkWith()
-#    hiro_talk.main_before_stuff(name_list)
+if __name__=='__main__':
+    rospy.init_node('hiro_talk')
+    name_list = ["rolled_egg", "fried_chicken", "broccoli", "tomato", "fried_chicken", "rolled_egg", "tomato"]
+    hiro_talk = TalkWith()
+    hiro_talk.main_before_stuff(name_list)
 
 """
 #xlsx
