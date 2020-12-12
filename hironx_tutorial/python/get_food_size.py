@@ -3,6 +3,7 @@
 import rospy
 from sensor_msgs.msg import Image
 from jsk_recognition_msgs.msg import RectArray
+from std_msgs.msg import Float32
 from cv_bridge import CvBridge
 
 from copy import deepcopy
@@ -19,15 +20,17 @@ class ImageProcessing:
         self.rects_info = None
         self.header = None
         self.pub_info_list = None
+        self.lbox_y = None
         self.bridge = CvBridge()
 
         self.pub = rospy.Publisher("/result_of_imageprocessing", RectArray, queue_size=1)
 
         rospy.Subscriber("/coral_rects_info", RectArray, self.coral_cb)
         rospy.Subscriber("/head_camera/rgb/image_raw", Image, self.image_cb)
+        rospy.Subscriber("/lunchbox_2D_y", Float32, self.pos_cb)
         
     def image_cb(self, msg):
-        if self.flag == True:
+        if self.flag and self.lbox_y:
             print("Img Called")
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
             self.get_foods_rects()
@@ -35,6 +38,7 @@ class ImageProcessing:
             self.flag = False
             self.rects_info = None
             self.output_img = None
+            self.lbox_y = None
 
     def coral_cb(self, msg):
         if not self.rects_info:
@@ -46,7 +50,13 @@ class ImageProcessing:
             self.output_img = deepcopy(self.cv_image)
             for rect in self.rects_info:
                 cv2.rectangle(self.output_img, (rect.x, rect.y), (rect.x + rect.width, rect.y + rect.height), (255,0,0))
+                # print("center-coords {} {}".format(rect.x+rect.width/2, rect.y+ rect.height/2))
             self.flag = True
+
+    def pos_cb(self, msg):
+        if not self.lbox_y:
+            print("Position Called")
+            self.lbox_y = msg.data
 
     def get_foods_rects(self):
         # self.cv_image = cv2.imread("/home/tork/Desktop/images/output_color.png")
@@ -92,6 +102,10 @@ class ImageProcessing:
                         length = math.sqrt((lbottom[0] - ltop[0])**2 + (lbottom[1] - ltop[1])**2)
                         len_x =  rbottom[0] - lbottom[0]
                         len_y = lbottom[1] - rbottom[1]
+                        # adjustment of perspective
+                        diff_y = self.lbox_y - (rect.y + rect.height / 2)
+                        width += diff_y * 4 / 100
+                        length += diff_y * 4 / 100
                         self.pub_info_list[i] = (len_x, len_y, width, length)
         
     def publish_result(self):

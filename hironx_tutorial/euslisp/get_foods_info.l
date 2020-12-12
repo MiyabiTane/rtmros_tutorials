@@ -10,6 +10,8 @@
 (ros::advertise *pub-center-topic* geometry_msgs::PointStamped 1)
 (setq *pub-lbpos-topic* "/lunchbox_positions/input")
 (ros::advertise *pub-lbpos-topic* jsk_recognition_msgs::LineArray 1)
+(setq *pub-lby-topic* "/lunchbox_2D_y")
+(ros::advertise *pub-lby-topic* std_msgs::Float32 1)
 (ros::rate 1)
 
 ;;keep info
@@ -83,9 +85,12 @@
     (send r_msg :height (send got_rect :height))
     (send pub_rects_msg :rects (append (send pub_rects_msg :rects) (list r_msg)))
     )
+  (setq pub_lby_msg (instance std_msgs::Float32 :init))
+  (send pub_lby_msg :data (elt lbox-center 1))
   (ros::subscribe "/result_of_imageprocessing" jsk_recognition_msgs::RectArray #'imgpro_cb)
   (until got_rects_list
 	 (ros::publish "/coral_rects_info" pub_rects_msg)
+	 (ros::publish "/lunchbox_2D_y" pub_lby_msg)
 	 (ros::spin-once)
 	 (ros::sleep)
 	 )
@@ -261,8 +266,8 @@
 		    ((> (- (send rect :width) (send rect :height)) 10)
 		     (progn
 		       (setq radi (+ (atan (/ y x)) (/ pi 2))) ;;辺が長い方を掴むように
-		       (setq width_ (* (/ (send rect :width) (+ lbox_length 20)) *length*))
-		       (setq height_ (* (/ (send rect :height) (+ lbox_length 20)) *length*)))))
+		       (setq width_ (* (/ (send rect :width) lbox_length) *length*))
+		       (setq height_ (* (/ (send rect :height) lbox_length) *length*)))))
 	      (format t "radi ~A~%" radi))
 	  (progn
 	    (format t "result not found~%")
