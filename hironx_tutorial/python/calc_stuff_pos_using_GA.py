@@ -147,7 +147,7 @@ class StuffFood():
     def generate_next_generation(self):
     #update self.cand_list    
         points, max_point = self.evaluate()
-        print(max_point)
+        # print(max_point)
         copy = deepcopy(self.cand_list)
         for i in range((self.indivisuals - self.elite)//2):
             index_1, index_2 = np.random.choice(len(points), 2, replace = True, p = points)

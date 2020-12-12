@@ -13,7 +13,7 @@
   (setq cur_force force_data)
   (setq torque_x_diff (- (send cur_torque :x) (send prev_torque :x)))
   (setq force_z_diff (- (send cur_force :z) (send prev_force :z)))
-  (when (or (> torque_x_diff 0.1)) (> force_z_diff 0.1)
+  (when (or (> torque_x_diff 0.15)) (> force_z_diff 0.15)
 	(setq loop_flag nil))
   (setq prev_torque cur_torque)
   (setq prev_force cur_force)
@@ -32,14 +32,15 @@
     (ros::sleep)
     (when cb_flag
       (format t "torque diff ~A force_diff ~A~%" torque_x_diff force_z_diff)
-      (send *hironxjsk* :rarm :move-end-pos #f(0 0 -3) :world)
-      (send-robot)
+      (when loop_flag
+	(send *hironxjsk* :rarm :move-end-pos #f(0 0 -3) :world)
+	(send-robot))
       (setq cb_flag nil)
       )
     )
   (format t "finish loop~%")
   (setq *catch-z* (elt (send (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords) :pos) 2))
-  (setq *catch-z* (+ *catch-z* 5))
+  (setq *catch-z* (+ *catch-z* 2))
   (format t "catch-z ~A~%" *catch-z*)
   )
 

@@ -94,10 +94,6 @@ class ImageProcessing:
                         ltop = left_lst[0]
                         lbottom = left_lst[1]
                         rbottom = right_lst[1]
-                        # visualize result
-                        cv2.line(self.output_img, (ltop[0], ltop[1]), (lbottom[0], lbottom[1]), (0, 255, 0), thickness=2)
-                        cv2.line(self.output_img, (lbottom[0], lbottom[1]), (rbottom[0], rbottom[1]), (255, 0, 0), thickness=2)
-                        
                         width =  math.sqrt((rbottom[0] - lbottom[0])**2 + (rbottom[1] - lbottom[1])**2)
                         length = math.sqrt((lbottom[0] - ltop[0])**2 + (lbottom[1] - ltop[1])**2)
                         len_x =  rbottom[0] - lbottom[0]
@@ -106,6 +102,11 @@ class ImageProcessing:
                         diff_y = self.lbox_y - (rect.y + rect.height / 2)
                         width += diff_y * 4 / 100
                         length += diff_y * 4 / 100
+                        if width > rect.width * 2:
+                            continue
+                        # visualize result
+                        cv2.line(self.output_img, (ltop[0], ltop[1]), (lbottom[0], lbottom[1]), (0, 255, 0), thickness=2)
+                        cv2.line(self.output_img, (lbottom[0], lbottom[1]), (rbottom[0], rbottom[1]), (255, 0, 0), thickness=2)
                         self.pub_info_list[i] = (len_x, len_y, width, length)
         
     def publish_result(self):

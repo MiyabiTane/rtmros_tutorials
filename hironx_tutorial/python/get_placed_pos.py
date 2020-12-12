@@ -11,8 +11,8 @@ import numpy as np
 from copy import deepcopy
 
 TH = 50
-X_OFFSET = 0
-Y_OFFSET = -20
+X_OFFSET = -5
+Y_OFFSET = -15
 EXTENTION = 0
 
 class VisualFeedback:
@@ -61,9 +61,15 @@ class VisualFeedback:
     def get_food_pos(self, before_img, after_img):
         im_diff = before_img.astype(int) - after_img.astype(int)
         im_diff_abs = np.abs(im_diff)
-        im_diff_abs[np.where(im_diff_abs[:,:,0] < TH) and np.where(im_diff_abs[:,:,1] < TH) and np.where(im_diff_abs[:,:,2] < TH)] = [0, 0, 0]
-        # cv2.imwrite("/home/tork/Downloads/diff_.png", im_diff_abs)
-        where = np.where(im_diff_abs != [0, 0, 0])
+        im_diff_img = im_diff_abs.astype(np.uint8)
+        im_diff_img[np.where(im_diff_abs[:,:,0] < TH) and np.where(im_diff_abs[:,:,1] < TH) and np.where(im_diff_abs[:,:,2] < TH)] = [0, 0, 0]
+        img_gray = cv2.cvtColor(im_diff_img, cv2.COLOR_BGR2GRAY)
+        _, img_binary = cv2.threshold(img_gray, 1, 255, cv2.THRESH_BINARY)
+        # remove noise
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
+        img_del_noise = cv2.morphologyEx(img_binary, cv2.MORPH_OPEN, kernel)
+        cv2.imwrite("/home/tanemoto/Desktop/images/diff.png", img_del_noise)
+        where = np.where(img_del_noise != 0)
         if len(where[0]) < 50:
             return None, None
         pos_x = (np.min(where[1]) + np.max(where[1])) / 2
