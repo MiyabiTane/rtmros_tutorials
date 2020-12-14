@@ -28,6 +28,9 @@
 	      /robotsound/status                                 
               /robotsound_jp/status
 	      /voice_text/parameter_descriptions                                                   
-              /voice_text/parameter_updates"
+              /voice_text/parameter_updates
+	      /edgetpu_object_detector/output/class
+	      /edgetpu_object_detector/output/image
+	      /edgetpu_object_detector/output/rects"
 	output="screen" />  
 </launch>
