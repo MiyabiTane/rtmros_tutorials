@@ -99,13 +99,10 @@
 					      :after-stamp (ros::time-now)))))
   )
  
-(defun catch-food (pos radi)
+(defun catch-food (pos radi offset)
   ;;same pose 
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
-  (if (= radi 0)
-      (setq pos (v+ pos (v+ *tong-offset* #f(10 0 0)))) ;;tong offset
-    (setq pos (v+ pos (v+ *tong-offset* #f(0 10 0)))) ;;内側め
-    )
+  (setq pos (v+ pos offset))
   (setq pos (v+ pos (float-vector 0 0 (- *catch-z* (elt pos 2))))) ;;set z *catch-z*
   (setq *move* (v- pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
@@ -167,10 +164,11 @@
   (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
   (send-robot)
   ;;ずれの分
-  (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
+  (send *hironxjsk* :larm :move-end-pos (float-vector 0 diff_y 0) :world)
   (send-robot)
-  ;;pull-over
   (send *hironxjsk* :larm :move-end-pos #f(0 0 -70) :world)
+  (send-robot)
+  (send *hironsjsk* :larm :move-end-pos (float-vector diff_x 0 0) :world)
   (send-robot)
   (close-chops)
   ;;retry
@@ -286,7 +284,8 @@
   (ros::unsubscribe "/lunchbox_positions/output")
   ;;(format t "diff_x diff_y ~A ~A~%" diff_2D_x diff_2D_y)
   (if (not (= diff_2D_x 0))
-      (pull_over pos food-size lbox_pos diff_2D_x diff_2D_y))
+      (pull_over pos food-size lbox_pos diff_2D_x diff_2D_y)
+    (setq fail_catch_flag t))
   ;;(push)
   (place-init-pose)
   )
@@ -311,8 +310,17 @@
 	      (open-tongs 1)))
 	(open-tongs 0))
       (sub-img 0)
-      (catch-food (elt pos_list num) (elt radi_list num))
+      (if (= (elt radi_list num) 0)
+	  (setq offset (v+ *tong-offset* #f(10 0 0))) ;;tong offset
+	(setq offset (v+ *tong-offset* #f(0 10 0))) ;;内側め
+	)
+      (setq fail_catch_flag nil)
+      (catch-food (elt pos_list num) (elt radi_list num) offset)
       (place-food (elt place_list num) target_name food-size)
+      (when fail_catch_flag
+	;; retry to catch
+	(catch-food (elt pos_list num) (elt radi_list num) offset)
+	(place-food (elt place_list num) target_name food-size))
       )
     )
   )
