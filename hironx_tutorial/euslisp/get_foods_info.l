@@ -170,6 +170,7 @@
   (setq rbottom (float-vector lbox_x lbox_y))
   (send pub_lbox_msg :lines (append (send pub_lbox_msg :lines) (list line_msg)))
   (setq lbox_length (norm (v- ltop lbottom)))
+  (setq lbox_height (norm (v- ltop rtop)))
   (format t "ltop lbottom rtop rbottom ~A ~A ~A ~A~%" ltop lbottom rtop rbottom)
   (setq lbox-center (scale (/ 1.0 4) (v+ (v+ (v+ ltop lbottom) rtop) rbottom)))
   ;;(ros::publish *pub-lbpos-topic* pub_lbox_msg)
@@ -238,6 +239,9 @@
     )
   (setq rects (send rect_msg :rects))
   (get_food_pos rects bpos_list bsize_list)
+  (dotimes (i (length size_list))
+    (if (eql (elt size_list i) i)
+	(setq again_flag t)))
   (if again_flag
       (main_loop)
     (progn
@@ -253,7 +257,7 @@
 	    (progn
 	      (setq x (float (send rect :x)))
 	      (setq y (float (send rect :y)))
-	      (cond ((< (abs (- (send rect :width) (send rect :height))) 10)
+	      (cond ((<= (abs (- (send rect :width) (send rect :height))) 10)
 		     (progn
 		       (setq radi 0) ;;縦横比があまりないものはそのまま
 		       (setq width_ (* (/ (send rect :width) lbox_length) *length*))

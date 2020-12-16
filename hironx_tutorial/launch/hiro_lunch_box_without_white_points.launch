@@ -253,6 +253,34 @@
 	output="screen" respawn="true">
   </node>
 
+  <!-- approximate sync for euslisp node -->
+  <node name="edgetpu_boxes_synchronizer" pkg="jsk_topic_tools" type="synchronize_republish.py"
+        output="screen" respawn="true">
+    <rosparam subst_value="true">
+      topics:
+      - /edgetpu_object_detector/output/class
+      - segmentation_decomposer_ssd/boxes
+      - /edgetpu_object_detector/output/rects
+      approximate_sync: true
+      slop: 0.01
+      queue_size: 1000
+    </rosparam>
+  </node>
+
+  <!-- to syncronize -->
+  <!--
+  <node name="throttle_segmentation_sync" pkg="nodelet" type="nodelet"
+        args="load jsk_topic_tools/LightweightThrottle $(arg manager)"
+        output="screen"
+        machine="$(arg cloud_machine)">
+    <remap from="~input" to="edgetpu_object_detector/output/class" />
+    <remap from="~output" to="/edgetpu_object_detector/output/class_throttle" />
+    <rosparam>
+     update_rate: 0.2
+    </rosparam>
+  </node>
+  -->
+
   <!-- 2d food coords to 3d coords -->
   <!--
   <node name="pointcloud_screenpoint_nodelet" pkg="nodelet" type="nodelet"

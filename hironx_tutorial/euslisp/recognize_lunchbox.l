@@ -110,11 +110,11 @@
 	    (send *hironxjsk* :larm :move-end-pos move-vector :world)
 	    (send-robot))))
     (when (< thresh 0)
-	(if (< (- prev_hand cur_hand) thresh)
-	    (setq flag 1)
-	  (progn
-	    (send *hironxjsk* :larm :move-end-pos move-vector :world)
-	    (send-robot))))
+      (if (or (< (- prev_hand cur_hand) thresh) (> (- prev_hand cur_hand) 2))
+	  (setq flag 1)
+	(progn
+	  (send *hironxjsk* :larm :move-end-pos move-vector :world)
+	  (send-robot))))
     )
   (setq hiro-hand-pos (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
   (setq *edge* (v- hiro-hand-pos *chopsticks-off-set*))
