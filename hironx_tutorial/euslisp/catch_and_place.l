@@ -1,7 +1,8 @@
 #!/usr/bin/env roseus
 
-(ros::advertise "/before_place_img" sensor_msgs::Image 1)
-(ros::advertise "/placed_img" sensor_msgs::Image 1)
+(ros::roseus-add-msgs "hironx_tutorial")
+(ros::advertise "/get_placed_pos/input" hironx_tutorial::LunchBoxStatus 1)
+(setq pub_status_msg (instance hironx_tutorial::LunchBoxStatus :init))
 
 (defun place-init-pose ()
   (send *hironxjsk* :reset-manip-pose)
@@ -14,6 +15,17 @@
   (look-73b2-table)
   (send *hironxjsk* :larm :move-end-pos #f(0 160 0) :world)
   (send-robot)
+  )
+
+(defun pub-lbox-coords ()
+  (send (send pub_status_msg :ltop) :x (elt ltop 0))
+  (send (send pub_status_msg :ltop) :y (elt ltop 1))
+  (send (send pub_status_msg :lbottom) :x (elt lbottom 0))
+  (send (send pub_status_msg :lbottom) :y (elt lbottom 1))
+  (send (send pub_status_msg :rtop) :x (elt rtop 0))
+  (send (send pub_status_msg :rtop) :y (elt rtop 1))
+  (send (send pub_status_msg :rbottom) :x (elt rbottom 0))
+  (send (send pub_status_msg :rbottom) :y (elt rbottom 1))
   )
 
 (defun open-chops (size)
@@ -35,7 +47,7 @@
     (send-left-hand 2.0)
     (setq cur_hand (send *ri* :hand-angle-vector :lhand))
     (setq diff (norm (v- (v- cur_hand prev_hand) close)))
-    ;;(format t "diff ~A~%" diff)
+    (format t "diff ~A~%" diff)
     (when (< (elt (send *hironxjsk* :hand-angle-vector :lhand) 0) -25.1)
       (format t "enough~%")
       (setq not_find_flag t)
@@ -100,15 +112,25 @@
 
 (defun sub-img (num)
   (cond ((= num 0)
-	 (setq *bimg-msg* (one-shot-subscribe "/head_camera/rgb/image_raw"
-					      sensor_msgs::Image
-					      :after-stamp (ros::time-now))))
+	 (progn
+	   (setq *bimg-msg* (one-shot-subscribe "/head_camera/rgb/image_raw"
+						sensor_msgs::Image
+						:after-stamp (ros::time-now)))
+	   (send pub_status_msg :before *bimg-msg*)))
 	((= num 1)
-	 (setq *aimg-msg* (one-shot-subscribe "/head_camera/rgb/image_raw"
-					      sensor_msgs::Image
-					      :after-stamp (ros::time-now)))))
+	 (progn
+	   (setq *aimg-msg* (one-shot-subscribe "/head_camera/rgb/image_raw"
+						sensor_msgs::Image
+						:after-stamp (ros::time-now)))
+	   (send pub_status_msg :after *aimg-msg*)))
+	((= num 2)
+	 (progn
+	   (setq *eimg-msg* (one-shot-subscribe "/head_camera/rgb/image_raw"
+						sensor_msgs::Image
+						:after-stamp (ros::time-now))))
+	 (send pub_status_msg :empty *eimg-msg*)))
   )
- 
+
 (defun catch-food (pos radi offset)
   ;;same pose 
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
@@ -146,25 +168,23 @@
   (close-chops)
   )
 
-(defun pull_over (pos food-size lbox_pos diff_2D_x diff_2D_y)
+(defun pull_over (pos lbox_pos diff_2D_x diff_2D_y 3D_width 3D_height approach)
   ;;おかずの大きさに合わせて開く
   (open-chops (+ (elt food-size 1) 10))
   ;;pos GAでの座標 x->x, y->-y
   ;;おかずはお弁当箱の真ん中に置かれる
-  (setq goal_x (elt pos 0))
-  (setq goal_y (elt pos 1))
+  (setq target_x (+ *front* (elt pos 0)))
+  (setq target_y  (- *left* (elt pos 1)))
   (setq center_x (/ *length* 2))
   (setq center_y (/ *width* 2))
   (setq size_x (elt food-size 0))
   (setq size_y (elt food-size 1))
-  (format t "goal_x: ~A center_x: ~A~%" goal_x center_x)
-  (format t "goal_y: ~A center_y: ~A~%" goal_y center_y)
   ;;置く時にずれた分
   (setq diff_x (* (/ (* -1 diff_2D_y) lbox_length) *length*))
   (setq diff_y (* (/ (* -1 diff_2D_x) lbox_length) *length*))
   (setq center_x (+ center_x diff_x))
   (setq center_y (+ center_y diff_y))
-  (format t "diff_x diff_y ~A ~A~%" diff_x diff_y)
+  (format t "from ~A diff_x diff_y ~A ~A~%" approach diff_x diff_y)
  
   (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
   (setq start-pos (v+ lbox_pos (float-vector 0 0 (+ *G-z* 60))))
@@ -173,95 +193,99 @@
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
   (send-robot)
-  ;;お弁当箱から箸先がはみ出ないように
-  (if (> (+ diff_x (+ (elt food-size 1) 10)) lbox_height)
-      (setq diff_x (- diff_x 10))) 
-  (if (< (- diff_x (+ (elt food-size 1) 10)) (* -1 lbox_height))
-      (setq diff_x (+ diff_x 10)))
-  ;;ずれの分
-  (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
-  (send *hironxjsk* :larm :move-end-pos (float-vector (/ (elt food-size 0) 2) 0 0) :world)
-  (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -75) :world)
-  (send-robot)
-  (send *hironxjsk* :larm :move-end-pos (float-vector (* -1 (/ (elt food-size 0) 2)) 0 0) :world)
-  (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 50) :world)
-  (send *hironxjsk* :larm :move-end-pos #f(-10 0 0) :world)
-  (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -50) :world)
-  (send-robot)
-  (close-chops)
-  ;;retry
-  (when not_find_flag
-    (catch-retry food-size #f(-10 0 50))
-    (when not_find_flag
-      (catch-retry food-size #f(20 0 50))
-      (when not_find_flag
-	(catch-retry food-size #f(-20 10 50))
-	(when not_find_flag
-	  (catch-retry food-size #f(0 -20 50))
-	  ))))
-  (setq cur_hiro_coords (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
-  (setq cur_chop_coords (v- cur_hiro_coords *chopstick-offset*))
-  (setq cur_x (elt cur_chop_coords 0))
-  (setq cur_y (elt cur_chop_coords 1))
-  (setq target_x (+ *front* (elt pos 0)))
-  (setq target_y  (- *left* (elt pos 1)))
-  (format t "target_x ~A cur_x ~A~%" target_x cur_x)
-  (format t "target_y ~A cur_y ~A~%" target_y cur_y)
-  (send *hironxjsk* :larm :move-end-pos (float-vector (- (+ *front* (elt pos 0)) cur_x) 0 0) :world)
-  (send-robot)
-  (send *hironxjsk* :larm :move-end-pos (float-vector 0 (- (- *left* (elt pos 1)) cur_y) 0) :world)
-  (send-robot)
-  #|
-  ;;上下寄せ
-  (send *hironxjsk* :larm :move-end-pos (float-vector (- (- goal_x center_x) diff_x) 0 0) :world)
-  ;;やりすぎ防止
-  (cond ((> (- (- goal_x center_x) diff_x) 0)
-	 (send *hironxjsk* :larm :move-end-pos #f(-5 0 0) :world))
-	((< (- (- goal_x center_x) diff_x) 0)
-	 (send *hironxjsk* :larm :move-end-pos #f(5 0 0) :world)))
-  (send-robot)
-  ;;左右寄せ
-  (send *hironxjsk* :larm :move-end-pos (float-vector 0 (- (- goal_y center_y) diff_y) 0) :world)
-  ;;やりすぎ防止
-  (cond ((> (- (- goal_y center_y) diff_y) 0)
-	 (send *hironxjsk* :larm :move-end-pos #f(0 5 0) :world))
-	((< (- (- goal_y center_y) diff_y) 0)
-	 (send *hironxjsk* :larm :move-end-pos #f(0 -5 0) :world)))
-  (send-robot)
-  |#
-  ;;仕上げ
-  (open-chops (+ (elt food-size 1) 10))
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 80) :world)
-  (send-robot)
-  (rotate-chops (* -1 (/ pi 2)))
-  (cond ((> (- target_y cur_y) 0)
-	 (send *hironxjsk* :larm :move-end-pos (float-vector 0 (* -1 (+ (/ (elt food-size 1) 2) 5)) 0) :world))
-	((< (- target_y cur_y) 0)
-	 (send *hironxjsk* :larm :move-end-pos (float-vector 0 (+ (/ (elt food-size 1) 2) 5) 0) :world)))
-  (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -80) :world)
-  (send-robot)
-  (cond ((> (- target_y cur_y) 0)
-	 (send *hironxjsk* :larm :move-end-pos #f(0 10 0) :world))
-	((< (- target_y cur_y) 0)
-	 (send *hironxjsk* :larm :move-end-pos #f(0 -10 0) :world)))
-  (send-robot)
-  ;;open chopsticks
-  (send *hironxjsk* :hand-angle-vector :lhand (v+ (send *ri* :hand-angle-vector :lhand) #f(5 -5 -5 5)))
-  (send-left-hand 2.0)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 90) :world)
-  (send-robot)
-  (send target-chop-coords :rotate (/ pi 2) :z :world)
-  (send *hironxjsk* :larm :inverse-kinematics target-chop-coords :move-target chop-coords)
-  (send-robot)
-  (open-chops (+ (elt food-size 1) 10))
+  ;;おかずを掴む
+  ;;両側からお箸で掴めるパターン
+  (if (or (or (string< "top" approach) (string< "bottom" approach)) (and (string< "left" approach) (string< "right" approach)))
+      (progn
+	(open-chops (+ 3D_width 10))
+	(send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
+	(cond ((string< "top" approach)
+	       (send *hironxjsk* :larm :move-end-pos (float-vector (/ 3D_height 2) 0 0) :world)
+	       (send-robot)
+	       (send *hironxjsk* :larm :move-end-pos #f(0 0 -75) :world)
+	       (send-robot)
+	       (send *hironxjsk* :larm :move-end-pos (float-vector (* -1 (/ 3D_height 2)) 0 0) :world)
+	       (send-robot)
+	       (when (and (string< "left" approach) (string< "right" approach))
+		 (send *hironxjsk* :larm :move-end-pos #f(-10 0 50) :world)
+		 (send-robot)
+		 (send *hironxjsk* :larm :move-end-pos #f(0 0 -50) :world)
+		 (send-robot)))
+	      ((string< "bottom" approach)
+	       (send *hironxjsk* :larm :move-end-pos (float-vector (* -1 (/ 3D_height 2)) 0 0) :world)
+	       (send-robot)
+	       (send *hironxjsk* :larm :move-end-pos #f(0 0 -75) :world)
+	       (send-robot)
+	       (send *hironxjsk* :larm :move-end-pos (float-vector (/ 3D_height 2) 0 0) :world)
+	       (send-robot)
+	       (when (and (string< "left" approach) (string< "right" approach))
+		 (send *hironxjsk* :larm :move-end-pos #f(-10 0 50) :world)
+		 (send-robot)
+		 (send *hironxjsk* :larm :move-end-pos #f(0 0 -50) :world)
+		 (send-robot)))
+	      (when (and (string< "left" approach) (string< "right" approach))
+		(send *hironxjsk* :larm :move-end-pos #f(0 0 -75))
+		(send-robot)))
+	(close-chops)
+	(setq cur_hiro_coords (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
+	(setq cur_chop_coords (v- cur_hiro_coords *chopstick-offset*))
+	(setq cur_x (elt cur_chop_coords 0))
+	(setq cur_y (elt cur_chop_coords 1))
+	(format t "target_x ~A cur_x ~A~%" target_x cur_x)
+	(format t "target_y ~A cur_y ~A~%" target_y cur_y)
+	(send *hironxjsk* :larm :move-end-pos (float-vector (- target_x cur_x) 0 0) :world)
+	(send-robot)
+	(send *hironxjsk* :larm :move-end-pos (float-vector 0 (- target_y cur_y) 0) :world)
+	(send-robot)
+	;;open chops
+	(send *hironxjsk* :hand-angle-vector :lhand (v+ (send *ri* :hand-angle-vector :lhand) #f(5 -5 -5 5)))
+	(send-left-hand 2.0)
+	(send *hironxjsk* :larm :move-end-pos #f(0 0 70) :world)
+	(send-robot))
+    ;;両側が空いていないパターン：可能なら左右寄せ
+    (progn
+      (open-chops (+ 3D_height 10))
+      (setq cur_hiro_coords (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
+      (setq cur_chop_coords (v- cur_hiro_coords *chopstick-offset*))
+      (setq cur_x (elt cur_chop_coords 0))
+      (setq cur_y (elt cur_chop_coords 1))
+      (format t "target_x ~A cur_x ~A~%" target_x cur_x)
+      (format t "target_y ~A cur_y ~A~%" target_y cur_y)
+      (cond ((and (string< "left" approach) (< (- target_y cur_y) 0))
+	     (setq rotation (* -1 (/ pi 2)))
+	     (rotate-chops rotation)
+	     (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
+	     (send *hironxjsk* :larm :move-end-pos (float-vector 0 (/ 3D_width 2) 0) :world)
+	     (send-robot)
+	     (send *hironxjsk* :larm :move-end-pos #f(0 0 -75) :world)
+	     (send-robot)
+	     (send *hironxjsk* :larm :move-end-pos (float-vector 0 (- target_y cur_y) 0) :world)
+	     (send-robot))
+	    ((and (string< "right" approach) (> (- target_y cur_y) 0))
+	     (setq rotation (/ pi 2))
+	     (rotate-chops rotation)
+	     (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
+	     (send *hironxjsk* :larm :move-end-pos (float-vector 0 (* -1 (/ 3D_width 2)) 0))
+	     (send-robot)
+	     (send *hironxjsk* :larm :move-end-pos #f(0 0 -75) :world)
+	     (send-robot)
+	     (send *hironxjsk* :larm :move-end-pos (float-vector 0 (- target_y cur_y) 0) :world)
+	     (send-robot)))
+      ;;open-chops
+      (send *hironxjsk* :hand-angle-vector :lhand (v+ (send *ri* :hand-angle-vector :lhand) #f(5 -5 -5 5)))
+      (send-left-hand 2.0)
+      (send *hironxjsk* :larm :move-end-pos #f(0 0 80) :world)
+      (send-robot)
+      (send *hironxjsk* :larm :move-end-pos #f(0 50 0) :world)
+      (send-robot)
+      (send target-chop-coords :rotate (-1 * rotation) :z :world)
+      (send *hironxjsk* :larm :inverse-kinematics target-chop-coords :move-target chop-coords)
+      (send-robot))
+    )
   )
 
 ;;(defun push ()
-  ;;To Do
+;;To Do
 ;;  )
 
 (defun drag ()
@@ -304,6 +328,9 @@
 (defun place_cb (msg)
   (setq diff_2D_x (send msg :x))
   (setq diff_2D_y (send msg :y))
+  (setq 3D_y_size (* (/ (send msg :width) lbox_length) *length*))
+  (setq 3D_x_size (* (/ (send msg :height) lbox_length) *length*))
+  (setq approach (send msg :direction))
   (setq catch_flag t)
   )
   
@@ -327,17 +354,16 @@
   (send *hironxjsk* :rarm :move-end-pos #f(0 -200 0) :world)
   (send-robot)
   (sub-img 1)
-  (ros::subscribe "/lunchbox_positions/output" geometry_msgs::Point #'place_cb)
+  (ros::subscribe "/get_placed_pos/output" geometry_msgs::Point #'place_cb)
   (setq catch_flag nil)
   (until catch_flag
-	 (ros::publish "/before_place_img" *bimg-msg*)
-	 (ros::publish "/placed_img" *aimg-msg*)
+	 (ros::publish "/get_placed_pos/input" pub_status_msg)
 	 (ros::spin-once)
 	 (ros::sleep))
-  (ros::unsubscribe "/lunchbox_positions/output")
+  (ros::unsubscribe "/get_placed_pos/output")
   ;;(format t "diff_x diff_y ~A ~A~%" diff_2D_x diff_2D_y)
   (if (not (= diff_2D_x 0))
-      (pull_over pos food-size lbox_pos diff_2D_x diff_2D_y)
+      (pull_over pos lbox_pos diff_2D_x diff_2D_y 3D_y_size 3D_x_size approach)
     (setq fail_catch_flag t))
   ;;(push)
   (place-init-pose)
@@ -348,6 +374,8 @@
   (setq *chopstick-offset* #f(-12.624 18.437 84.2388))
   (format t "- - - CATCH AND PLACE - - -~%")
   (place-init-pose)
+  (pub-lbox-coords)
+  (sub-img 2)
   (dotimes (i (length order_list))
     (setq num (elt order_list i))
     (format t "num : ~A~%" num)
