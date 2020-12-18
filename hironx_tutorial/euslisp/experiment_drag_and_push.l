@@ -2,11 +2,6 @@
 
 ;; You need to run stuff_by_GA.py
 
-;; ----ここに情報を手入力する-----
-(setq name_list '())
-(setq box_list '())
-;; ------------------------------
-
 (load "package://hrpsys_ros_bridge_tutorials/euslisp/hironxjsk-interface.l")
 (hironxjsk-init)
 (objects (list *hironxjsk*))
@@ -106,16 +101,16 @@
 (open-hand)
 
 (load "recognize_lunchbox.l")
-(recognize_lunchbox_main)
-#|
-(setq *G-z* -43.7091)
-(setq right -85.9902)
-(setq back 523.885)
-(setq *left* -15.5319)
-(setq *front* 408.68)
-(setq *length* 115.205)
-(setq *width* 70.4583)
-|#
+;;(recognize_lunchbox_main)
+
+(setq *G-z* -46.0804)
+(setq right 93.66)
+(setq back 412.818)
+(setq *left* 183.743)
+(setq *front* 303.19)
+(setq *length* 109.629)
+(setq *width* 90.0829)
+
 (format t "G-z ~A~%" *G-z*)
 (format t "right ~A back ~A~%" right back)
 (format t "left ~A front ~A~%" *left* *front*)
@@ -123,7 +118,19 @@
 
 (setq *catch-z* 0)
 
+(load "get_foods_info.l")
 (get-lbox-coords)
+
+;; ----ここに情報を手入力する-----
+;;(setq name_list (list "rolled_egg" "fried_chicken" "tomato" "rolled_egg" "fried_chicken" "tomato" "broccoli"))
+;;(setq box_list (list (list 61.9163 33.538 26.6308) (list 38.6977 29.6682 23.5618) (list 27.0884 29.6682 25.923) (list 63.2063 36.1179 24.9603) (list 29.6682 42.5675 21.7706) (list 25.7985 29.6682 26.3146) (list 47.7272 29.6682 22.7253)))
+(setq name_list (list "rolled_egg" "fried_chicken" "rolled_egg" "fried_chicken" "broccoli"))
+(setq box_list (list (list 61.9163 33.538 26.6308) (list 38.6977 29.6682 23.5618) (list 63.2063 36.1179 24.9603) (list 29.6682 42.5675 21.7706) (list 47.7272 29.6682 22.7253)))
+;; ------------------------------
+
+;;publish food info and lunchbox info
+(load "info_publisher.l")
+(info_publisher_main)
 
 ;;Calculate stuff posiion using stuff_by_GA.py
 
@@ -147,7 +154,23 @@
     (format t "target : ~A~%" target_name)
     (format t "size : ~A place : ~A~%" food-size (elt place_list num))
     (sub-img 0)
-    (format t "PLEASE PUT FOOD in 5 seconds~%")
-    (ros::duration-sleep 5.0)
-    (place-food (elt place_list num) target_name food-size))
+    (format t "PLEASE PUT FOOD in 10 seconds~%")
+    (ros::duration-sleep 10.0)
+    (sub-img 1)
+    (send (send pub_status_msg :header) :stamp (ros::time-now))
+    (ros::subscribe "/get_placed_pos/output" hironx_tutorial::FoodPacking #'place_cb)
+    (setq catch_flag nil)
+    (until catch_flag
+	   (ros::publish "/get_placed_pos/input" pub_status_msg)
+	   (ros::spin-once)
+	   (ros::sleep))
+    (ros::unsubscribe "/get_placed_pos/output")
+    (setq lbox_pos (float-vector (/ (+ *front* back) 2) (/ (+ *left* right) 2) 0))
+    (if (not (= 3D_x_size 0))
+	(pull_over (elt place_list num) lbox_pos diff_2D_x diff_2D_y 3D_y_size 3D_x_size approach)
+      (setq fail_catch_flag t))
+    ;;(push)
+    (place-init-pose)
+    )
   )
+  

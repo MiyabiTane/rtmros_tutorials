@@ -10,9 +10,11 @@ import numpy as np
 from copy import deepcopy
 
 TH = 50
-X_OFFSET = -5
+X_OFFSET = -7
 Y_OFFSET = -15
 EXTENTION = 0
+TH2 = 15
+TH3 = 10
 
 class VisualFeedback:
 
@@ -21,6 +23,8 @@ class VisualFeedback:
         self.after_img = None
         self.output_img = None
         self.empty_img = None
+        self.stamp = None
+        self.pub_msg = None
         self.count = 0 #for visualize
         self.lt_x = None; self.lt_y = None; self.lb_x = None; self.lb_y = None
         self.rt_x = None; self.rt_y = None; self.rb_x = None; self.rb_y = None
@@ -30,17 +34,27 @@ class VisualFeedback:
         rospy.Subscriber("~input", LunchBoxStatus, self.status_cb)
 
     def status_cb(self, msg):
-        print("Called Lunchbox status")
-        self.empty_img = self.bridge.imgmsg_to_cv2(msg.empty, desired_encoding="bgr8")
-        self.before_img = self.bridge.imgmsg_to_cv2(msg.before, desired_encoding="bgr8")
-        self.after_img = self.bridge.imgmsg_to_cv2(msg.after, desired_encoding="bgr8")
-        self.lt_x = msg.ltop.x; self.lt_y = msg.ltop.y; self.lb_x = msg.lbottom.x; self.lb_y = msg.lbottom.y
-        self.rt_x = msg.rtop.x; self.rt_y = msg.rtop.y; self.rb_x = msg.rbottom.x; self.rb_y = msg.rbottom.y
-        self.lt_x += X_OFFSET; self.lb_x += X_OFFSET; self.rt_x += X_OFFSET; self.rb_x += X_OFFSET
-        self.lt_y += Y_OFFSET; self.lb_y += Y_OFFSET; self.rt_y += Y_OFFSET; self.rb_y += Y_OFFSET
-        self.publish_info()
-        self.count += 1
-
+        flag = False
+        if not self.stamp:
+            flag = True
+        elif self.stamp != msg.header.stamp:
+            flag = True
+        if flag:
+            print("Called Lunchbox status")
+            self.stamp = msg.header.stamp
+            self.empty_img = self.bridge.imgmsg_to_cv2(msg.empty, desired_encoding="bgr8")
+            self.before_img = self.bridge.imgmsg_to_cv2(msg.before, desired_encoding="bgr8")
+            self.after_img = self.bridge.imgmsg_to_cv2(msg.after, desired_encoding="bgr8")
+            self.lt_x = msg.ltop.x; self.lt_y = msg.ltop.y; self.lb_x = msg.lbottom.x; self.lb_y = msg.lbottom.y
+            self.rt_x = msg.rtop.x; self.rt_y = msg.rtop.y; self.rb_x = msg.rbottom.x; self.rb_y = msg.rbottom.y
+            self.lt_x += X_OFFSET; self.lb_x += X_OFFSET; self.rt_x += X_OFFSET; self.rb_x += X_OFFSET
+            self.lt_y += Y_OFFSET; self.lb_y += Y_OFFSET; self.rt_y += Y_OFFSET; self.rb_y += Y_OFFSET
+            self.publish_info()
+            self.count += 1
+        if self.pub_msg:
+            self.pub.publish(self.pub_msg)
+            
+            
     def get_diff_img(self, before_img, after_img, k_size=3):
         im_diff = before_img.astype(int) - after_img.astype(int)
         im_diff_abs = np.abs(im_diff)
@@ -58,7 +72,7 @@ class VisualFeedback:
         cv2.imwrite("/home/tanemoto/Desktop/images/diff.png", diff_img)
         where = np.where(diff_img != 0)
         if len(where[0]) < 50:
-            return None, None
+            return None, None, None, None
         pos_x = (np.min(where[1]) + np.max(where[1])) / 2
         pos_y = (np.min(where[0]) + np.max(where[0])) / 2
         width = np.max(where[1]) - np.min(where[1])
@@ -66,9 +80,10 @@ class VisualFeedback:
         return pos_x, pos_y, width, height
 
     def if_can_place(self, diff_img):
-        full = len(diff_img)
-        where = np.where(diff_img != 0)
-        if float(len(where)) / full > 0.5:
+        image_size = diff_img.size
+        whitePixels = cv2.countNonZero(diff_img)
+        print("full : {}%".format(float(whitePixels) / image_size * 100))
+        if float(whitePixels) / image_size > 0.4:
             return False
         return True
 
@@ -84,39 +99,43 @@ class VisualFeedback:
         width_ = size[0]
         height_ = size[1]
         # check top space
-        if y_ - height_ / 2 - 10 >= 0:
-            top = y_ - height_ / 2 - 10
+        if y_ - height_ / 2 - TH2 >= 0:
+            top = y_ - height_ / 2 - TH3
             bottom = y_ - height_ / 2
             left = max(0, x_ - width_ / 2)
             right = min(W, x_ + width_ / 2)
             ans = self.if_can_place(diff_img[top: bottom, left: right])
+            cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_top.png", diff_img[top: bottom, left: right])
             if ans:
                 ans_str += "top,"
         # check bottom space
-        if y_ + height_ / 2 + 10 <= H:
+        if y_ + height_ / 2 + TH2 <= H:
             top = y_ + height_ / 2
-            bottom = y_ + height_ / 2 + 10
+            bottom = y_ + height_ / 2 + TH3
             left = max(0, x_ -width_ / 2)
             right = min(W, x_ + width_ / 2)
             ans = self.if_can_place(diff_img[top: bottom, left: right])
+            cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_bottom.png", diff_img[top: bottom, left: right])
             if ans:
                 ans_str += "bottom,"
         # check left space
-        if x_ - width_ / 2 - 10 >= 0:
+        if x_ - width_ / 2 - TH2 >= 0:
             top = max(0, y_ - height_ / 2)
             bottom = min(H, y_ + height_ / 2)
-            left = x_ - width_ / 2 - 10
+            left = x_ - width_ / 2 - TH3
             right = x_ - width_ / 2
             ans = self.if_can_place(diff_img[top: bottom, left: right])
+            cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_left.png", diff_img[top: bottom, left: right])
             if ans:
                 ans_str += "left,"
         # check right space
-        if x_ + width_ / 2 + 10 <= W:
+        if x_ + width_ / 2 + TH2 <= W:
             top = max(0, y_ - height_ / 2)
             bottom = min(H, y_ + height_ / 2)
             left = x_ + width_ / 2
-            right = x_ + width_ / 2 + 10
+            right = x_ + width_ / 2 + TH3
             ans = self.if_can_place(diff_img[top: bottom, left: right])
+            cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_right.png", diff_img[top: bottom, left: right])
             if ans:
                 ans_str += "right"
         return ans_str
@@ -134,11 +153,14 @@ class VisualFeedback:
         lbox_bimg = self.before_img[top: bottom, left: right, :]
         lbox_aimg = self.after_img[top: bottom, left: right, :]
         pos_x, pos_y, width, height = self.get_food_info(lbox_bimg, lbox_aimg)
-        direction = self.get_available_angle(self.empty_img[top: bottom, left: right, :], lbox_bimg, (pos_x, pos_y), (width, height))
         if pos_x:
+            direction = self.get_available_angle(self.empty_img[top: bottom, left: right, :], lbox_bimg, (pos_x, pos_y), (width, height))
             pos_x += left
             pos_y += top
         else:
+            direction = ""
+            width = 0
+            height = 0
             pos_x = 0
             pos_y = 0
         cv2.drawMarker(self.output_img, (int(pos_x), int(pos_y)), (0, 0, 255), markerType=cv2.MARKER_STAR, markerSize=20)
@@ -147,13 +169,12 @@ class VisualFeedback:
         if pos_x:
             pos_x -= (left + right) / 2
             pos_y -= (top + bottom) / 2
-        pub_msg = FoodPacking()
-        pub_msg.x = pos_x
-        pub_msg.y = pos_y
-        pub_msg.width = width
-        pub_msg.height = height
-        pub_msg.direction = direction
-        self.pub.publish(pub_msg)
+        self.pub_msg = FoodPacking()
+        self.pub_msg.x = pos_x
+        self.pub_msg.y = pos_y
+        self.pub_msg.width = width
+        self.pub_msg.height = height
+        self.pub_msg.direction = direction
 
 if __name__ == '__main__':
     rospy.init_node("get_placed_pos")
