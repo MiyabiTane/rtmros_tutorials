@@ -107,7 +107,19 @@ class ImageProcessing:
                         # visualize result
                         cv2.line(self.output_img, (ltop[0], ltop[1]), (lbottom[0], lbottom[1]), (0, 255, 0), thickness=2)
                         cv2.line(self.output_img, (lbottom[0], lbottom[1]), (rbottom[0], rbottom[1]), (255, 0, 0), thickness=2)
-                        self.pub_info_list[i] = (len_x, len_y, width, length)
+                        # catch the longer edge
+                        if width / length >= 1.5:
+                            if bcenter_y > 360:
+                                angular = math.atan(len_y / len_x) + math.pi / 2
+                            else:
+                                angular = math.atan(len_y / len_x) - math.pi / 2
+                        elif length / width >= 1.5:
+                            angular = math.atan(len_y / len_x)
+                            width = height
+                            height = width
+                        else:
+                            angular = 0
+                        self.pub_info_list[i] = (angular, angular, width, length)
         
     def publish_result(self):
         pub_msgs = RectArray()
