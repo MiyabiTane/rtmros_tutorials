@@ -100,7 +100,6 @@
   (ros::subscribe "/edgetpu_boxes_synchronizer/pub_01" jsk_recognition_msgs::BoundingBoxArray #'get_box_cb)
   (ros::subscribe "/edgetpu_boxes_synchronizer/pub_02" jsk_recognition_msgs::RectArray #'get_rects_cb)
   (while (not (and (and rect_msg box_msg) name_msg))
-    (ros::publish *pub-lbpos-topic* pub_lbox_msg) ;;catch_and_placeで使う情報を送っておく
     (ros::spin-once)
     (ros::sleep)
     )
