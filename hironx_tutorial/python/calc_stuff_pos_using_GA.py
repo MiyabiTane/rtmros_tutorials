@@ -199,9 +199,19 @@ class StuffFood():
             cv2.rectangle(img, point_1, point_2, color, thickness=-1)
             cv2.rectangle(img, point_1, point_2, (255,255,0))
         cv2.imwrite(name, img)
-    
 
-    def GA_main(self):
+    # improvement
+    def rotate_food(self):
+        change_num = len(self.box_dict) / 4
+        random_int = [random.randint(0, len(self.box_dict) - 1) for i in range(change_num)]
+        for num in random_int:
+            width = self.box_dict[num][0]
+            height = self.box_dict[num][1]
+            if float(width) / height < 1.5:
+                self.box_dict[num] = [height, width]
+
+
+    def GA_calc(self):
         for i in range(self.generation):
             #print(i)
             #print(self.cand_list)
@@ -212,7 +222,17 @@ class StuffFood():
         print(ans, "point : ", point)
         print(self.cand_list[(np.argmax(points))])
         best_stuff = BL_main(self.cand_list[(np.argmax(points))], self.box_dict, self.box_size)
-        print(best_stuff)
+        return best_stuff, point
+
+
+    def GA_main(self, rotation_num):
+        max_point = -100
+        for i in range(rotation_num):
+            self.rotate_food()
+            stuff, point = self.GA_calc()
+            if point > max_point:
+                max_point = point
+                best_stuff = stuff
         #if food overflow, keep the index in cannot_stuff
         cannot_stuff = []
         for i in range(len(best_stuff)):
@@ -328,7 +348,7 @@ def main():
     like_list, dislike_list, want_to_eat = get_talk_info(name_list)
     #calc stuff pos using GA and BL
     stuff = StuffFood(name_list, box_list, box_size, like_list, dislike_list, want_to_eat, 20, 200, 6)
-    best_stuff, _ = stuff.GA_main()
+    best_stuff, _ = stuff.GA_main(rotation_num=3)
     #publish stuff canter coords and box width and height
     pub = rospy.Publisher('/stuff_food_pos', PoseArray, queue_size = 1)
     pose_msg = PoseArray()
