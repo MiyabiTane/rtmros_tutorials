@@ -3,6 +3,8 @@
 import rospy
 from sensor_msgs.msg import Image
 from jsk_recognition_msgs.msg import RectArray
+from jsk_recognition_msgs.msg import LineArray
+from jsk_recognition_msgs.msg import Line
 from std_msgs.msg import Float32
 from cv_bridge import CvBridge
 
@@ -23,7 +25,7 @@ class ImageProcessing:
         self.lbox_y = None
         self.bridge = CvBridge()
 
-        self.pub = rospy.Publisher("/result_of_imageprocessing", RectArray, queue_size=1)
+        self.pub = rospy.Publisher("/result_of_imageprocessing", LineArray, queue_size=1)
 
         rospy.Subscriber("/coral_rects_info", RectArray, self.coral_cb)
         rospy.Subscriber("/head_camera/rgb/image_raw", Image, self.image_cb)
@@ -108,36 +110,34 @@ class ImageProcessing:
                         cv2.line(self.output_img, (ltop[0], ltop[1]), (lbottom[0], lbottom[1]), (0, 255, 0), thickness=2)
                         cv2.line(self.output_img, (lbottom[0], lbottom[1]), (rbottom[0], rbottom[1]), (255, 0, 0), thickness=2)
                         # catch the longer edge
-                        if width / length >= 1.5:
+                        if float(width) / length >= 1.5:
                             if bcenter_y > 360:
-                                angular = math.atan(len_y / len_x) + math.pi / 2
+                                angular = math.atan(float(len_y) / len_x) + math.pi / 2
                             else:
-                                angular = math.atan(len_y / len_x) - math.pi / 2
-                        elif length / width >= 1.5:
-                            angular = math.atan(len_y / len_x)
-                            width = height
-                            height = width
+                                angular = math.atan(float(len_y) / len_x) - math.pi / 2
+                        elif float(length) / width >= 1.5:
+                            angular = math.atan(float(len_y) / len_x)
+                            width, length = length, width
                         else:
                             angular = 0
                         self.pub_info_list[i] = (angular, angular, width, length)
         
     def publish_result(self):
-        pub_msgs = RectArray()
+        pub_msgs = LineArray()
         pub_msgs.header = self.header
-        pub_msgs.rects = self.rects_info
         for info, rect_origin in zip(self.pub_info_list, self.rects_info):
-            pub_msg = rect_origin
+            pub_msg = Line()
             if info:
-                pub_msg.x = info[0]
-                pub_msg.y = info[1]
-                pub_msg.width = info[2]
-                pub_msg.height = info[3]
+                pub_msg.x1 = info[0]
+                pub_msg.y1 = info[1]
+                pub_msg.x2 = info[2]
+                pub_msg.y2 = info[3]
             else:
-                pub_msg.x = 0
-                pub_msg.y = 0
-                pub_msg.width = 0
-                pub_msg.height = 0
-            pub_msgs.rects.append(pub_msg)
+                pub_msg.x1 = 0
+                pub_msg.y1 = 0
+                pub_msg.x2 = 0  # rect_origin.width
+                pub_msg.y2 = 0  # rect_origin.height
+            pub_msgs.lines.append(pub_msg)
         # visualize result
         cv2.imwrite("/home/tanemoto/Desktop/images/output.png", self.output_img)
         self.pub.publish(pub_msgs)

@@ -10,7 +10,7 @@ import numpy as np
 from copy import deepcopy
 
 TH = 50
-X_OFFSET = -7
+X_OFFSET = -5
 Y_OFFSET = -15
 EXTENTION = 0
 TH2 = 15
@@ -69,20 +69,35 @@ class VisualFeedback:
 
     def get_food_info(self, before_img, after_img):
         diff_img = self.get_diff_img(before_img, after_img)
-        cv2.imwrite("/home/tanemoto/Desktop/images/diff.png", diff_img)
         where = np.where(diff_img != 0)
+        boxes = []
         if len(where[0]) < 50:
             return None, None, None, None
-        pos_x = (np.min(where[1]) + np.max(where[1])) / 2
-        pos_y = (np.min(where[0]) + np.max(where[0])) / 2
-        width = np.max(where[1]) - np.min(where[1])
-        height = np.max(where[0]) - np.min(where[0])
+        _, contours, _hierarchy = cv2.findContours(diff_img ,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        max_size = 0
+        box = None
+        if len(contours) == 0:
+            return None, None, None, None
+        for cnt in contours:
+            if max_size < cv2.contourArea(cnt):
+                max_size = cv2.contourArea(cnt)
+                rect = cv2.minAreaRect(cnt)
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+        # print("BOX: {}".format(box))
+        cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + ".png", diff_img)
+        vis_img = cv2.drawContours(after_img, [box], 0, (0,0,255), 2)
+        cv2.imwrite("/home/tanemoto/Desktop/images/diff_box_" + str(self.count) + ".png", vis_img)
+        pos_x = np.mean(box[:, 0])
+        pos_y = np.mean(box[:, 1])
+        width = np.max(box[:, 0]) - np.min(box[:, 0])
+        height = np.max(box[:, 1]) - np.min(box[:, 1])
         return pos_x, pos_y, width, height
 
     def if_can_place(self, diff_img):
         image_size = diff_img.size
         whitePixels = cv2.countNonZero(diff_img)
-        print("full : {}%".format(float(whitePixels) / image_size * 100))
+        # print("full : {}%".format(float(whitePixels) / image_size * 100))
         if float(whitePixels) / image_size > 0.4:
             return False
         return True
@@ -100,40 +115,40 @@ class VisualFeedback:
         height_ = size[1]
         # check top space
         if y_ - height_ / 2 - TH2 >= 0:
-            top = y_ - height_ / 2 - TH3
-            bottom = y_ - height_ / 2
-            left = max(0, x_ - width_ / 2)
-            right = min(W, x_ + width_ / 2)
+            top = int(y_ - height_ / 2 - TH3)
+            bottom = int(y_ - height_ / 2)
+            left = int(max(0, x_ - width_ / 2))
+            right = int(min(W, x_ + width_ / 2))
             ans = self.if_can_place(diff_img[top: bottom, left: right])
             cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_top.png", diff_img[top: bottom, left: right])
             if ans:
                 ans_str += "top,"
         # check bottom space
         if y_ + height_ / 2 + TH2 <= H:
-            top = y_ + height_ / 2
-            bottom = y_ + height_ / 2 + TH3
-            left = max(0, x_ -width_ / 2)
-            right = min(W, x_ + width_ / 2)
+            top = int(y_ + height_ / 2)
+            bottom = int(y_ + height_ / 2 + TH3)
+            left = int(max(0, x_ -width_ / 2))
+            right = int(min(W, x_ + width_ / 2))
             ans = self.if_can_place(diff_img[top: bottom, left: right])
             cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_bottom.png", diff_img[top: bottom, left: right])
             if ans:
                 ans_str += "bottom,"
         # check left space
         if x_ - width_ / 2 - TH2 >= 0:
-            top = max(0, y_ - height_ / 2)
-            bottom = min(H, y_ + height_ / 2)
-            left = x_ - width_ / 2 - TH3
-            right = x_ - width_ / 2
+            top = int(max(0, y_ - height_ / 2))
+            bottom = int(min(H, y_ + height_ / 2))
+            left = int(x_ - width_ / 2 - TH3)
+            right = int(x_ - width_ / 2)
             ans = self.if_can_place(diff_img[top: bottom, left: right])
             cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_left.png", diff_img[top: bottom, left: right])
             if ans:
                 ans_str += "left,"
         # check right space
         if x_ + width_ / 2 + TH2 <= W:
-            top = max(0, y_ - height_ / 2)
-            bottom = min(H, y_ + height_ / 2)
-            left = x_ + width_ / 2
-            right = x_ + width_ / 2 + TH3
+            top = int(max(0, y_ - height_ / 2))
+            bottom = int(min(H, y_ + height_ / 2))
+            left = int(x_ + width_ / 2)
+            right = int(x_ + width_ / 2 + TH3)
             ans = self.if_can_place(diff_img[top: bottom, left: right])
             cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_right.png", diff_img[top: bottom, left: right])
             if ans:

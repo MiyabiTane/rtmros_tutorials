@@ -66,7 +66,7 @@
   )
 
 (defun imgpro_cb (msg)
-  (setq got_rects_list (send msg :rects))
+  (setq got_rects_list (send msg :lines))
   (format t "Called imgpro result~%")
   )
 
@@ -85,7 +85,7 @@
     )
   (setq pub_lby_msg (instance std_msgs::Float32 :init))
   (send pub_lby_msg :data (elt lbox-center 1))
-  (ros::subscribe "/result_of_imageprocessing" jsk_recognition_msgs::RectArray #'imgpro_cb)
+  (ros::subscribe "/result_of_imageprocessing" jsk_recognition_msgs::LineArray #'imgpro_cb)
   (until got_rects_list
 	 (ros::publish "/coral_rects_info" pub_rects_msg)
 	 (ros::publish "/lunchbox_2D_y" pub_lby_msg)
@@ -235,12 +235,12 @@
 	(setq size (elt size_list i))
 	(format t "- - - ~A - - -~%" (elt name_list i))
 	(format t "coords, size ~A ~A~%" (elt pos_list i) size)
-	(format t "degree, width, height ~A ~A ~A ~A~%" (rad2deg (send rect :x)) (send rect :width) (send rect :height))
-	(if (not (= (send rect :width) 0))
+	(format t "degree, width, height ~A ~A ~A~%" (rad2deg (send rect :x1)) (send rect :x2) (send rect :y2))
+	(if (not (= (send rect :x2) 0))
 	    (progn
-	      (setq width_ (* (/ (send rect :width) lbox_length) *length*))
-	      (setq height_ (* (/ (send rect :height) lbox_length) *length*))
-	      (setq radi (send rect :x)))
+	      (setq width_ (* (/ (send rect :x2) lbox_length) *length*))
+	      (setq height_ (* (/ (send rect :y2) lbox_length) *length*))
+	      (setq radi (send rect :x1)))
 	  (progn
 	    (format t "result not found~%")
 	    (setq radi 0)
