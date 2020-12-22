@@ -21,8 +21,8 @@ from std_msgs.msg import Int16MultiArray
 import hiro_talk
 import cv2
 
-SAVE_NAME = "/home/tanemoto/Desktop/images/place_output.png"
-ORDER_SAVE_NAME = "/home/tanemoto/Desktop/images/order_output.png"
+SAVE_NAME = "/home/tork/Desktop/images/place_output.png"
+ORDER_SAVE_NAME = "/home/tork/Desktop/images/order_output.png"
 ADD_SIZE = 10
 
 """
@@ -69,7 +69,6 @@ class StuffFood():
         self.dislike_list = dislike_list
         #for visalize
         self.name_list = name_list
-        self.best_box_dict = self.box_dict
 
 
     def evaluate(self):
@@ -108,15 +107,16 @@ class StuffFood():
             #if satisfy the dislike condition, point -=1
             point += calc_point(self.dislike_list, stuff_pos, plus_flag = False)
             #if favorite food is not in lunchbox point -= 1
-            remaining_capacity = self.box_size[0] * self.box_size[1]
+            capacity = self.box_size[0] * self.box_size[1]
             for i in range(len(stuff_pos)):
                 if stuff_pos[i][0] + self.box_dict[i][0] > self.box_size[0] or stuff_pos[i][1] + self.box_dict[i][1] > self.box_size[1]:
                     if self.name_list[i] in self.want_to_eat:
                         point -= 2
                 else:
-                    remaining_capacity -= self.box_dict[i][0] * self.box_dict[i][1]
-            empty_point = float(remaining_capacity) / (self.box_size[0] * self.box_size[1]) * 20
-            point -= empty_point
+                    capacity -= self.box_dict[i][0] * self.box_dict[i][1]
+            area_percent = float(capacity) / (self.box_size[0] * self.box_size[1])
+            # print(area_percent)
+            point -= area_percent * 20
             points.append(point)
         #for_choose_parameter
         #print(points)
@@ -188,65 +188,17 @@ class StuffFood():
             self.cand_list[index] = deepcopy(copy)
 
 
-    def visualize(self, best_stuff, cannot_stuff, name):
-        down = 300
-        img = np.full((300,300, 3), 200, dtype=np.uint8)
-        cv2.rectangle(img, (0, 0), (self.box_size[0], self.box_size[1]), (0, 0, 0))
-        color_dict = {"tomato": (0,0,255), "rolled_egg": (0,255,255), "octopus_wiener": (255,0,255), "fried_chicken": (0,0,128), "broccoli": (0,128,0)}
-        for i in range(len(best_stuff)):
-            if i in cannot_stuff:
-                point_1 = (300 - int(self.best_box_dict[i][0]), int(down))
-                point_2 = (300, int(down) - int(self.best_box_dict[i][1]))
-                down -= self.best_box_dict[i][1]
-            else:
-                point_1 = (int(best_stuff[i][0] - self.best_box_dict[i][0]//2), int(best_stuff[i][1] - self.best_box_dict[i][1]//2))
-                point_2 = (int(best_stuff[i][0] + self.best_box_dict[i][0]//2), int(best_stuff[i][1] + self.best_box_dict[i][1]//2))
-            color = color_dict[self.name_list[i]]
-            cv2.rectangle(img, point_1, point_2, color, thickness=-1)
-            cv2.rectangle(img, point_1, point_2, (255,255,0))
-        cv2.imwrite(name, img)
-
-    # improvement
-    def rotate_food(self, count):
-        changed_flag = False
-        change_num = len(self.box_dict) / 4
-        random_int = [random.randint(0, len(self.box_dict) - 1) for i in range(change_num)]
-        for num in random_int:
-            width = self.box_dict[num][0]
-            height = self.box_dict[num][1]
-            if float(width) / height < 1.5:
-                self.box_dict[num] = [height, width]
-                print("changed rotation")
-                changed_flag = True
-        if not changed_flag and count < 7:
-            self.rotate_food(count + 1)
-        # print(self.box_dict)
-
     def GA_calc(self):
-        for i in range(self.generation):
-            #print(i)
-            #print(self.cand_list)
+        for _ in range(self.generation):
             self.generate_next_generation()
             self.mutation()
         #select the one whose point is highest
         ans, point, points = self.best_keeper 
         print(ans, "point : ", point)
         print(self.cand_list[(np.argmax(points))])
-        best_stuff = BL_main(self.cand_list[(np.argmax(points))], self.box_dict, self.box_size)
-        return best_stuff, point
-
-
-    def GA_main(self, rotation_num):
-        max_point = -100
-        for i in range(rotation_num):
-            if i != 0:
-                self.rotate_food(0)
-            stuff, point = self.GA_calc()
-            if point > max_point:
-                max_point = point
-                best_stuff = stuff
-                self.best_box_dict = deepcopy(self.box_dict)
-        #if food overflow, keep the index in cannot_stuff
+        stuff = BL_main(self.cand_list[(np.argmax(points))], self.box_dict, self.box_size)
+        # デバッグ
+        best_stuff = deepcopy(stuff)
         cannot_stuff = []
         for i in range(len(best_stuff)):
             if best_stuff[i][0] + self.box_dict[i][0] > self.box_size[0] or best_stuff[i][1] + self.box_dict[i][1] > self.box_size[1]:
@@ -254,53 +206,120 @@ class StuffFood():
                 best_stuff[i] = (0,0)
             else:
                 best_stuff[i] = (best_stuff[i][0] + self.box_dict[i][0]/2, best_stuff[i][1] + self.box_dict[i][1]/2)
-        print(best_stuff)
-        self.visualize(best_stuff, cannot_stuff, SAVE_NAME)
-        return best_stuff, cannot_stuff
+        # print("stuff : {}".format(best_stuff))
+        visualize(self.box_size, self.box_dict.values(), best_stuff, cannot_stuff, self.name_list, SAVE_NAME)
+        return stuff, point, self.box_dict
+        
+
+# improvement
+def rotate_food(box_list, count):
+    new_box_list = deepcopy(box_list)
+    changed_flag = False
+    change_num = len(box_list) / 4
+    random_int = [random.randint(0, len(box_list) - 1) for i in range(change_num)]
+    for num in random_int:
+        width = box_list[num][0]
+        height = box_list[num][1]
+        if float(width) / height < 1.5:
+            new_box_list[num] = [height, width, box_list[num][2]]
+            changed_flag = True
+    if (not changed_flag) and count < 7:
+        rotate_food(box_list, count + 1)
+    print("changed rotation")
+    return new_box_list
 
 
-    def visualize_place_order(self, open_name, save_name, best_stuff, order_lst):
-        img = cv2.imread(open_name)
-        for i, index in enumerate(order_lst):
-            left_bottom = (int(best_stuff[index][0] - self.best_box_dict[index][0]/2), int(best_stuff[index][1] + self.best_box_dict[index][1]/2))
-            cv2.putText(img, str(i), left_bottom, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), thickness=2)
-        cv2.imwrite(save_name, img)
+def visualize(box_size, box_list, best_stuff, cannot_stuff, name_list, name):
+    down = 300
+    img = np.full((300,300, 3), 200, dtype=np.uint8)
+    cv2.rectangle(img, (0, 0), (box_size[0], box_size[1]), (0, 0, 0))
+    color_dict = {"tomato": (0,0,255), "rolled_egg": (0,255,255), "octopus_wiener": (255,0,255), "fried_chicken": (0,0,128), "broccoli": (0,128,0)}
+    for i in range(len(best_stuff)):
+        if i in cannot_stuff:
+            point_1 = (300 - int(box_list[i][0]), int(down))
+            point_2 = (300, int(down) - int(box_list[i][1]))
+            down -= box_list[i][1]
+        else:
+            point_1 = (int(best_stuff[i][0] - box_list[i][0]//2), int(best_stuff[i][1] - box_list[i][1]//2))
+            point_2 = (int(best_stuff[i][0] + box_list[i][0]//2), int(best_stuff[i][1] + box_list[i][1]//2))
+        color = color_dict[name_list[i]]
+        cv2.rectangle(img, point_1, point_2, color, thickness=-1)
+        cv2.rectangle(img, point_1, point_2, (255,255,0))
+    cv2.imwrite(name, img)
 
-    
-    def calc_place_order(self, stuff_pos):
-    # Decide the boundaries of the column based on the average size of the side dish
-        box_list = self.best_box_dict.values()
-        food_height = np.array(box_list)[:, 1]
-        ave_height = np.mean(food_height)
-        num = int(self.box_size[1] // ave_height) + 1
-        place_row_lst = [[]] * num
-        slip_lst = []
-        order_lst = np.array([])
-        for i, pos in enumerate(stuff_pos):
-            # The robot have known that tomato is slippery
-            if self.name_list[i] == "tomato":
-                slip_lst.append(i)
-            elif pos[0] != 0:
-                row = int(pos[1] // ave_height)
-                lst = deepcopy(place_row_lst[row])
-                lst.append((i, pos[0], pos[1]))
-                place_row_lst[row] = lst
-        print("place_row_lst:", place_row_lst)
-        if not place_row_lst[-1]:
-            place_row_lst = place_row_lst[:-1]
-        count = 0
-        for _ in range(len(place_row_lst)):
-            place_row = place_row_lst[count]
-            # sort by distance 
-            if place_row:
-                place_row.sort(key=lambda x: abs(x[1] - (self.box_size[0] / 2)))
-                index = np.array(place_row)[::-1][:, 0]
-                # print("index :", index)
-                order_lst = np.concatenate([order_lst, index])
-            count = count * -1 if count < 0 else (count * -1) - 1
-        order_lst = np.concatenate([order_lst, np.array(slip_lst)]).astype(np.int16)
-        print(order_lst)
-        return order_lst
+
+def calc_place_order(box_size, box_list, name_list, stuff_pos):
+# Decide the boundaries of the column based on the average size of the side dish
+    food_height = np.array(box_list)[:, 1]
+    ave_height = np.mean(food_height)
+    num = int(box_size[1] // ave_height) + 1
+    place_row_lst = [[]] * num
+    slip_lst = []
+    order_lst = np.array([])
+    for i, pos in enumerate(stuff_pos):
+        # The robot have known that tomato is slippery
+        if name_list[i] == "tomato":
+            slip_lst.append(i)
+        elif pos[0] != 0:
+            row = int(pos[1] // ave_height)
+            lst = deepcopy(place_row_lst[row])
+            lst.append((i, pos[0], pos[1]))
+            place_row_lst[row] = lst
+    # print("place_row_lst:", place_row_lst)
+    if not place_row_lst[-1]:
+        place_row_lst = place_row_lst[:-1]
+    count = 0
+    for _ in range(len(place_row_lst)):
+        place_row = place_row_lst[count]
+        # sort by distance 
+        if place_row:
+            place_row.sort(key=lambda x: abs(x[1] - (box_size[0] / 2)))
+            index = np.array(place_row)[::-1][:, 0]
+            # print("index :", index)
+            order_lst = np.concatenate([order_lst, index])
+        count = count * -1 if count < 0 else (count * -1) - 1
+    order_lst = np.concatenate([order_lst, np.array(slip_lst)]).astype(np.int16)
+    return order_lst
+
+
+def visualize_place_order(box_list, open_name, save_name, best_stuff, order_lst):
+    img = cv2.imread(open_name)
+    for i, index in enumerate(order_lst):
+        left_bottom = (int(best_stuff[index][0] - box_list[index][0]/2), int(best_stuff[index][1] + box_list[index][1]/2))
+        cv2.putText(img, str(i), left_bottom, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), thickness=2)
+    cv2.imwrite(save_name, img)
+
+
+def GA_main(name_list, box_list, box_size, like_list, dislike_list, want_to_eat, indivisuals=20, generation=200, elite=6, change_direc=7):
+    cur_box_list = box_list
+    max_point = -10000
+    best_stuff = None
+    best_box_dict = None
+    for _ in range(change_direc):
+        stuff_food = StuffFood(name_list, cur_box_list, box_size, like_list, dislike_list, want_to_eat, indivisuals, generation, elite)
+        stuff, point, box_dict = stuff_food.GA_calc()
+        # print("STUFF: ", stuff)
+        if point > max_point:
+            max_point = point
+            best_stuff = stuff
+            best_box_dict = box_dict
+        cur_box_list = rotate_food(cur_box_list, count=0)
+    #if food overflow, keep the index in cannot_stuff
+    b_size = [box_size[0] + ADD_SIZE, box_size[1] + ADD_SIZE]
+    cannot_stuff = []
+    for i in range(len(best_stuff)):
+        if best_stuff[i][0] + best_box_dict[i][0] > b_size[0] or best_stuff[i][1] + best_box_dict[i][1] > b_size[1]:
+            cannot_stuff += [i]
+            best_stuff[i] = (0,0)
+        else:
+            best_stuff[i] = (best_stuff[i][0] + best_box_dict[i][0]/2, best_stuff[i][1] + best_box_dict[i][1]/2)
+    print("- - - BEST STUFF - - -")
+    print("{} : {}point : ".format(best_stuff, max_point))
+    visualize(b_size, best_box_dict.values(), best_stuff, cannot_stuff, name_list, SAVE_NAME)
+    # calc place order
+    order_lst = calc_place_order(box_size, best_box_dict.values(), name_list, best_stuff)
+    visualize_place_order(best_box_dict.values(), SAVE_NAME, ORDER_SAVE_NAME, best_stuff, order_lst)
+    return best_stuff, order_lst
 
 
 class SubscribeVisualInfo():
@@ -346,6 +365,7 @@ class SubscribeVisualInfo():
             return self.box_size, self.name_list, self.box_list
         self.get_vis_info()
 
+
 def get_talk_info(name_list):
     Talk = hiro_talk.TalkWith()
     like_list, dislike_list, want_to_eat = Talk.main_before_stuff(name_list)
@@ -353,18 +373,14 @@ def get_talk_info(name_list):
 
 
 def main():
-    print("Called GA main")
+    # print("Called GA main")
     #subscribe info from Coral
     visual_info = SubscribeVisualInfo()
     box_size, name_list, box_list = visual_info.get_vis_info()
-    print(box_list)
-    print(name_list)
-    print(box_size)
     #subscribe info from talking
     like_list, dislike_list, want_to_eat = get_talk_info(name_list)
     #calc stuff pos using GA and BL
-    stuff = StuffFood(name_list, box_list, box_size, like_list, dislike_list, want_to_eat, 20, 200, 6)
-    best_stuff, _ = stuff.GA_main(rotation_num=5)
+    best_stuff, order_lst = GA_main(name_list, box_list, box_size, like_list, dislike_list, want_to_eat)
     #publish stuff canter coords and box width and height
     pub = rospy.Publisher('/stuff_food_pos', PoseArray, queue_size = 1)
     pose_msg = PoseArray()
@@ -374,9 +390,7 @@ def main():
         pose.position.y = stuff_pos[1]
         pose.position.z = box_list[i][2]
         pose_msg.poses.append(pose)
-    # calc place order and publish
-    order_lst = stuff.calc_place_order(best_stuff)
-    stuff.visualize_place_order(SAVE_NAME, ORDER_SAVE_NAME, best_stuff, order_lst)
+    # publish order
     pub2 = rospy.Publisher('/stuff_order', Int16MultiArray, queue_size = 1)
     order_msg = Int16MultiArray()
     order_msg.data = order_lst
