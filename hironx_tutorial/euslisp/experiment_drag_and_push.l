@@ -103,13 +103,13 @@
 (load "recognize_lunchbox.l")
 ;;(recognize_lunchbox_main)
 
-(setq *G-z* -46.0804)
-(setq right 93.66)
-(setq back 412.818)
-(setq *left* 183.743)
-(setq *front* 303.19)
-(setq *length* 109.629)
-(setq *width* 90.0829)
+(setq *G-z* -47.2512)
+(setq right 74.8102)
+(setq back 460.225)
+(setq *left* 169.872)
+(setq *front* 340.46)
+(setq *length* 119.765)
+(setq *width* 95.0622)
 
 (format t "G-z ~A~%" *G-z*)
 (format t "right ~A back ~A~%" right back)
@@ -122,10 +122,10 @@
 (get-lbox-coords)
 
 ;; ----ここに情報を手入力する-----
-;;(setq name_list (list "rolled_egg" "fried_chicken" "tomato" "rolled_egg" "fried_chicken" "tomato" "broccoli"))
-;;(setq box_list (list (list 61.9163 33.538 26.6308) (list 38.6977 29.6682 23.5618) (list 27.0884 29.6682 25.923) (list 63.2063 36.1179 24.9603) (list 29.6682 42.5675 21.7706) (list 25.7985 29.6682 26.3146) (list 47.7272 29.6682 22.7253)))
-(setq name_list (list "rolled_egg" "fried_chicken" "rolled_egg" "fried_chicken" "broccoli"))
-(setq box_list (list (list 61.9163 33.538 26.6308) (list 38.6977 29.6682 23.5618) (list 63.2063 36.1179 24.9603) (list 29.6682 42.5675 21.7706) (list 47.7272 29.6682 22.7253)))
+;;(setq name_list (list "rolled_egg" "fried_chicken" "rolled_egg" "broccoli" "broccoli" "fried_chicken" "fried_chicken" "tomato" "tomato"))
+;;(setq box_list (list (list 65.6859 27.4425 28.3371) (list 29.7736 38.8611 26.9225) (list 64.3962 32.2016 25.6383) (list 45.6781 49.6819 36.1149) (list 46.0856 43.0608 31.9909) (list 42.0373 27.6604 27.0514) (list 36.5796 37.7505 24.1324) (list 30.1875 27.3015 25.9203) (list 29.1224 31.8318 11.7092)))
+(setq name_list (list "fried_chicken" "tomato" "rolled_egg" "tomato" "fried_chicken" "broccoli" "fried_chicken" "broccoli" "tomato" "rolled_egg"))
+(setq box_list (list (list 44.8339 46.1884 24.5818) (list 31.0127 32.3634 32.05) (list 63.4509 30.4951 26.3596) (list 32.189 29.301 29.4766) (list 40.7252 47.4572 26.9578) (list 46.5322 42.2495 33.5564) (list 46.7047 39.042 25.6326) (list 42.4879 47.1751 27.5931) (list 29.2289 30.5835 26.2575) (list 64.5653 33.6759 24.8617)))
 ;; ------------------------------
 
 ;;publish food info and lunchbox info
@@ -167,9 +167,8 @@
     (ros::unsubscribe "/get_placed_pos/output")
     (setq lbox_pos (float-vector (/ (+ *front* back) 2) (/ (+ *left* right) 2) 0))
     (if (not (= 3D_x_size 0))
-	(pull_over (elt place_list num) lbox_pos diff_2D_x diff_2D_y 3D_y_size 3D_x_size approach)
+	(pull_over target_name (elt place_list num) lbox_pos diff_2D_x diff_2D_y 3D_y_size 3D_x_size (elt food-size 2) approach)
       (setq fail_catch_flag t))
-    ;;(push)
     (place-init-pose)
     )
   )

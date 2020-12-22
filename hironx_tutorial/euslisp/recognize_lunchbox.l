@@ -87,7 +87,7 @@
 	    (send *hironxjsk* :larm :move-end-pos move-vector :world)
 	    (send-robot))))
     (when (< thresh 0)
-	(if (< (- torque_norm prev_norm) thresh)
+	(if (or (< (- torque_norm prev_norm) thresh) (> (- torque_norm prev_norm) 2))
 	    (setq flag 1)
 	  (progn
 	    (send *hironxjsk* :larm :move-end-pos move-vector :world)
@@ -116,7 +116,7 @@
 	    (send *hironxjsk* :larm :move-end-pos move-vector :world)
 	    (send-robot))))
     (when (< thresh 0)
-      (if (or (< (- prev_hand cur_hand) thresh) (> (- prev_hand cur_hand) 2))
+      (if (< (- prev_hand cur_hand) thresh)
 	  (setq flag 1)
 	(progn
 	  (send *hironxjsk* :larm :move-end-pos move-vector :world)

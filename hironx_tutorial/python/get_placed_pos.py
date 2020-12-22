@@ -81,18 +81,22 @@ class VisualFeedback:
         for cnt in contours:
             if max_size < cv2.contourArea(cnt):
                 max_size = cv2.contourArea(cnt)
-                rect = cv2.minAreaRect(cnt)
-                box = cv2.boxPoints(rect)
-                box = np.int0(box)
+                # rect = cv2.minAreaRect(cnt)
+                # box = cv2.boxPoints(rect)
+                # box = np.int0(box)
+                x, y, w, h = cv2.boundingRect(cnt)
         # print("BOX: {}".format(box))
         cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + ".png", diff_img)
-        vis_img = cv2.drawContours(after_img, [box], 0, (0,0,255), 2)
+        # vis_img = cv2.drawContours(after_img, [box], 0, (0,0,255), 2)
+        vis_img = cv2.rectangle(after_img,(x,y),(x+w,y+h),(0,0,255),2)
         cv2.imwrite("/home/tanemoto/Desktop/images/diff_box_" + str(self.count) + ".png", vis_img)
-        pos_x = np.mean(box[:, 0])
-        pos_y = np.mean(box[:, 1])
-        width = np.max(box[:, 0]) - np.min(box[:, 0])
-        height = np.max(box[:, 1]) - np.min(box[:, 1])
-        return pos_x, pos_y, width, height
+        # pos_x = np.mean(box[:, 0])
+        # pos_y = np.mean(box[:, 1])
+        # width = np.max(box[:, 0]) - np.min(box[:, 0])
+        # height = np.max(box[:, 1]) - np.min(box[:, 1])
+        pos_x = x + w / 2
+        pos_y = y + h / 2
+        return pos_x, pos_y, w, h
 
     def if_can_place(self, diff_img):
         image_size = diff_img.size
