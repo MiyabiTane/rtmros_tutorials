@@ -156,8 +156,17 @@ class VisualFeedback:
             ans = self.if_can_place(diff_img[top: bottom, left: right])
             cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_right.png", diff_img[top: bottom, left: right])
             if ans:
-                ans_str += "right"
+                ans_str += "right,"
+        # check overlapping
+        top = int(y_ - height_ / 2)
+        bottom = int(y_ + height_ / 2)
+        left = int(x_ - width_ / 2)
+        right = int(x_ + width_ / 2) 
+        ans = self.if_can_place(diff_img)
+        if not ans:
+            ans_str += "overlap"
         return ans_str
+
         
     def publish_info(self):
         self.output_img = deepcopy(self.after_img)
