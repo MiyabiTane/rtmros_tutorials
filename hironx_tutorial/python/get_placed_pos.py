@@ -10,7 +10,7 @@ import numpy as np
 from copy import deepcopy
 
 TH = 50
-X_OFFSET = -5
+X_OFFSET = 0
 Y_OFFSET = -15
 EXTENTION = 0
 TH2 = 15
@@ -98,11 +98,11 @@ class VisualFeedback:
         pos_y = y + h / 2
         return pos_x, pos_y, w, h
 
-    def if_can_place(self, diff_img):
+    def if_can_place(self, diff_img, thresh=0.4):
         image_size = diff_img.size
         whitePixels = cv2.countNonZero(diff_img)
         # print("full : {}%".format(float(whitePixels) / image_size * 100))
-        if float(whitePixels) / image_size > 0.4:
+        if float(whitePixels) / image_size > thresh:
             return False
         return True
 
@@ -162,7 +162,8 @@ class VisualFeedback:
         bottom = int(y_ + height_ / 2)
         left = int(x_ - width_ / 2)
         right = int(x_ + width_ / 2) 
-        ans = self.if_can_place(diff_img)
+        ans = self.if_can_place(diff_img[top: bottom, left: right], thresh=0.1)
+        cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + "_overlap.png", diff_img[top: bottom, left: right])
         if not ans:
             ans_str += "overlap"
         return ans_str
