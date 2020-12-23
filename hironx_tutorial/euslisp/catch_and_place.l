@@ -219,30 +219,38 @@
   ;;(if (or (or (> (+ (elt cur_pos 1) diff_y) (+ *left* 5)) (< (+ (elt cur_pos 1) diff_y) (- right 5)))
   ;;	  (or (> target_y (+ *left* 5)) (< target_y (- right 5))))
   ;;    (rotate-chops (/ pi 2)))
-  (open-chops (+ 3D_width OPEN_TH))
+  (open-chops (+ 3D_width 20))
   (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
   (send-robot)
   (if (substringp "overlap" approach)
       ;;他のおかずに乗っている設定
       (progn
-	(send *hironxjsk* :larm :move-end-pos #f(0 0 -55) :world)
+	(send *hironxjsk* :larm :move-end-pos #f(0 0 -50) :world)
 	(send-robot)
 	(close-chops)
 	(when not_find_flag
 	  (catch-retry 3D_width #f(-10 0 50))
 	  (when not_find_flag
-	    (catch-retry 3D_width #f(20 0 50)))))
+	    (catch-retry 3D_width #f(20 0 50))
+	    (when not_find_flag
+	      (progn
+		(open-chops (+ 3D_width 5))
+		(send *hironxjsk* :larm :move-end-pos #f(0 0 -20) :world)
+		(send-robot)
+		(close-chops)
+		(send *hironxjsk* :larm :move-end-pos #f(0 0 20) :world)
+		(send-robot))))))
     ;;乗っていなかった時
     (progn
-      (if (not (or (or (substringp "top" approach) (substringp "bottom" approach))
-		   (and (substringp "left" approach) (substringp "right" approach))))
+      (if (or (or (substringp "top" approach) (substringp "bottom" approach))
+		   (and (substringp "left" approach) (substringp "right" approach)))
 	  (move_to_target diff_x diff_y 3D_width 3D_length 3D_height target_x target_y approach)
 	(progn
 	  (open-chops (+ 3D_width 5))
-	  (send *hironxjsk* :larm :move-end-pos #f(0 0 -20) :world)
+	  (send *hironxjsk* :larm :move-end-pos #f(0 0 -75) :world)
 	  (send-robot)
 	  (close-chops)
-	  (send *hironxjsk* :larm :move-end-pos #f(0 0 20) :world)
+	  (send *hironxjsk* :larm :move-end-pos #f(0 0 75) :world)
 	  (send-robot)))))
   (send *hironxjsk* :larm :move-end-pos #f(0 0 20) :world)
   (send-robot)
@@ -305,10 +313,17 @@
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
   (send-robot)
+  ;;すでに目標位置に近ければ何もしない
+  ;;(setq cur_pos (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
+  ;;(setq distance (norm (v- (float-vector target_x target_y)
+  ;;(float-vector (elt cur_pos 0) (elt cur_pos 1)))))
+  ;;(format t "distance ~A~%" distance)			   
   ;;トマトならプッシュ
   (if (string= name "tomato")
+      ;;(if (not (and (< distance 100) (substringp "overlap" approach)))
       (push_tomato diff_x diff_y 3D_width 3D_length 3D_height target_x target_y approach)
     (progn
+      ;;(when (> distance 100)
       (when (or (or (substringp "top" approach) (substringp "bottom" approach))
 		(and (substringp "left" approach) (substringp "right" approach)))
 	(open-chops (+ 3D_width OPEN_TH))
@@ -333,7 +348,7 @@
 	(open-chops (+ 3D_width OPEN_TH))))
     )
   )
-
+  
 (defun drag ()
   (setq cur_hand (send *ri* :hand-angle-vector :rhand))
   (send *hironxjsk* :hand-angle-vector :rhand (v+ cur_hand #f(15 -15 -15 15)))
