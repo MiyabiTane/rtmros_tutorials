@@ -3,7 +3,7 @@
 (ros::roseus-add-msgs "hironx_tutorial")
 (ros::advertise "/get_placed_pos/input" hironx_tutorial::LunchBoxStatus 1)
 (setq pub_status_msg (instance hironx_tutorial::LunchBoxStatus :init))
-(setq OPEN_TH 10)
+(setq OPEN_TH 15)
 
 (defun place-init-pose ()
   (send *hironxjsk* :reset-manip-pose)
@@ -176,42 +176,34 @@
   (close-chops)
   )
 
-(defun catch_tomato (pos food-size)
-  (rotate-chops (* -1 (/ pi 2)))
-  (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
-  (setq pos (v+ pos (float-vector 0 0 (- *catch-z* (elt pos 2)))))  ;;set z *catch-z*
-  (setq pos (v+ pos *chopstick-offset*))
-  (setq *move* (v- pos (send *hiro-pose* :pos)))
-  (send *hiro-pose* :translate *move* :world)
-  (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 40) :world)
-  (send-robot)
-  (open-chops (+ (elt food-size 1) 10))
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -110) :world)
-  (send-robot)
-  (close-chops)
-  (when not_find_flag
-    (catch-retry (+ (elt food-size 0) 10) #f(10 0 50))
-    (if not_find_flag
-	(catch-retry (+ (elt food-size 1) 10) #f(-20 0 50))))
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
-  (send-robot)
-  )
-
 (defun place_tomato (pos food-size)
   (setq target_x (+ *front* (elt pos 0)))
   (setq target_y (- *left* (elt pos 1)))
-  (setq cur_pos (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
-  (setq cur_x (elt cur_pos 0))
-  (setq cur_y (elt cur_pos 1))
-  (send *hironxjsk* :larm :move-end-pos (float-vector (- target_x cur_x) (- target_y cur_y) 0) :world)
+  ;;トングで掴んだトマトをお箸で掴み直す
+  (send *hironxjsk* :rarm :angle-vector #f(26.2101 -36.5776 -69.138 21.4993 30.4363 -109.8))
   (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -60) :world)
+  (setq cur_width (send *ri* :hand-width :rhand))
+  (send *ri* :hand-width :rhand (+ cur_width 5))
+  (send *hironxjsk* :larm :angle-vector #f(-23.0357 -4.54163 -114.595 -28.9565 -8.97938 11.3799))
+  (send-robot)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -90) :world)
+  (send-robot)
+  (close-chops)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 20) :world)
+  (send-robot)
+  (open-tongs 0)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 -100 0) :world)
+  (send-robot)
+  ;;お箸で詰める位置に運ぶ
+  (setq cur_pos (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
+  (setq move_x (- target_x (elt cur_pos 0)))
+  (setq move_y (- target_y (elt cur_pos 1)))
+  (send *hironxjsk* :larm :move-end-pos (float-vector move_x move_y 0) :world)
+  (send-robot)
+  (send *hironxjsk* :larm :move-end-pos (float-vector 0 0 (- (+ *catch-z* 64) (elt cur_pos 2))) :world)
   (send-robot)
   (open-chops (+ (elt food-size 0) 10))
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 20) :world)
-  (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 200 0) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(0 80 50) :world)
   (send-robot)
   ;;トングでプッシュ
   (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
@@ -229,7 +221,7 @@
   (place-in "tomato" #f(0 0 -20))
   (place-init-pose)
   )
-    
+
 (defun move_to_target (diff_x diff_y 3D_width 3D_length 3D_height target_x target_y approach)
   (cond ((substringp "top" approach)
 	 (send *hironxjsk* :larm :move-end-pos (float-vector (+ (/ 3D_length 2) 5) 0 0) :world)
@@ -264,9 +256,10 @@
 	 (send-robot)))
   (close-chops)
   (when not_find_flag
-    (catch-retry 3D_width #f(10 0 50))
-    (if not_find_flag
-	(catch-retry 3D_width #f(-20 0 50))))
+    (when (and (substringp "left" approach) (substringp "right" approach))
+      (catch-retry 3D_width #f(10 0 50))
+      (if not_find_flag
+	  (catch-retry 3D_width #f(-20 0 50)))))
   )
 
 (defun pull_over (name pos lbox_pos diff_2D_x diff_2D_y 3D_width 3D_length 3D_height approach)
@@ -416,40 +409,36 @@
       (setq food-size (elt box_list num))
       (format t "target : ~A~%" target_name)
       (format t "size : ~A place : ~A~%" food-size (elt place_list num))
-      (if (string= target_name "tomato")
+      (if (or (> (elt food-size 0) 50) (> (elt food-size 1) 50))
 	  (progn
-	    (catch_tomato (elt pos_list num) food-size)
-	    (place_tomato (elt pos_list num) food-size))
-	(progn
-	  (if (or (> (elt food-size 0) 50) (> (elt food-size 1) 50))
-	      (progn
-		(if (or (> (elt food-size 0) 60) (> (elt food-size 1) 60))
-		    (open-tongs 2)
-		  (open-tongs 1)))
-	    (open-tongs 0))
-	  (sub-img 0)
-	  (if (= (elt radi_list num) 0)
-	      ;;(setq offset (v+ *tong-offset* #f(10 0 0))
-	      (setq offset *tong-offset*) ;;tong offset
-	    (setq offset (v+ *tong-offset* #f(0 10 0))) ;;内側め
-	    )
-	  (setq fail_catch_flag nil)
-	  (catch-food (elt pos_list num) (elt radi_list num) offset)
-	  (place-food (elt place_list num) target_name food-size)
-	  #|
-	  (when fail_catch_flag
-	    ;; retry to catch
-	    (if (or (> (elt food-size 0) 50) (> (elt food-size 1) 50))
-		(progn
-		  (if (or (> (elt food-size 0) 60) (> (elt food-size 1) 60))
-		      (open-tongs 2)
-		    (open-tongs 1)))
-	      (open-tongs 0))
-	    (setq offset (v+ offset #f(0 0 -5)))
-	    (catch-food (elt pos_list num) (elt radi_list num) offset)
-	    (place-food (elt place_list num) target_name food-size))))
-	  |#
-	  )))
+	    (if (or (> (elt food-size 0) 60) (> (elt food-size 1) 60))
+		(open-tongs 2)
+	      (open-tongs 1)))
+	(open-tongs 0))
+      (sub-img 0)
+      (if (= (elt radi_list num) 0)
+	  (setq offset (v+ *tong-offset* #f(10 0 0))) ;;tong offset
+	(setq offset (v+ *tong-offset* #f(0 10 0))) ;;内側め
+	)
+      (setq fail_catch_flag nil)
+      (catch-food (elt pos_list num) (elt radi_list num) offset)
+      (if (string= target_name "tomato")
+	  (place_tomato (elt place_list num) food-size)
+	(place-food (elt place_list num) target_name food-size))
+      #|
+      (when fail_catch_flag
+      ;; retry to catch
+      (if (or (> (elt food-size 0) 50) (> (elt food-size 1) 50))
+      (progn
+      (if (or (> (elt food-size 0) 60) (> (elt food-size 1) 60))
+      (open-tongs 2)
+      (open-tongs 1)))
+      (open-tongs 0))
+      (setq offset (v+ offset #f(0 0 -5)))
+      (catch-food (elt pos_list num) (elt radi_list num) offset)
+      (place-food (elt place_list num) target_name food-size))))
+      |#
+      )
     )
   )
 
