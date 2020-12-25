@@ -23,6 +23,7 @@ class ImageProcessing:
         self.header = None
         self.pub_info_list = None
         self.lbox_y = None
+        self.max_size = 0
         self.bridge = CvBridge()
 
         self.pub = rospy.Publisher("/result_of_imageprocessing", LineArray, queue_size=1)
@@ -50,7 +51,9 @@ class ImageProcessing:
             self.pub_info_list = [[]] * len(self.rects_info)
             # draw coral result
             self.output_img = deepcopy(self.cv_image)
+            self.max_size = 0
             for rect in self.rects_info:
+                self.max_size = max(rect.width * rect.height, self.max_size)
                 cv2.rectangle(self.output_img, (rect.x, rect.y), (rect.x + rect.width, rect.y + rect.height), (255,0,0))
                 # print("center-coords {} {}".format(rect.x+rect.width/2, rect.y+ rect.height/2))
             self.flag = True
@@ -72,7 +75,7 @@ class ImageProcessing:
         # if opencv version is latest, _, contours, _hierarchy -> contours, _hierarchy
         _, contours, _hierarchy = cv2.findContours(bw_img ,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         boxes_cand = []
-        max_foods_size = self.rects_info[0].width * self.rects_info[0].height * 2
+        max_foods_size = self.max_size * 2
         for cnt in contours:
             #remove too small objects and too big object
             if 100 < cv2.contourArea(cnt) < max_foods_size:
