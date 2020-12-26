@@ -114,7 +114,7 @@ class ImageProcessing:
                         cv2.line(self.output_img, (lbottom[0], lbottom[1]), (rbottom[0], rbottom[1]), (255, 0, 0), thickness=2)
                         # catch the longer edge
                         if float(width) / length >= 1.5:
-                            if bcenter_y > 360:
+                            if bcenter_y > 260:
                                 angular = math.atan(float(len_y) / len_x) + math.pi / 2
                             else:
                                 angular = math.atan(float(len_y) / len_x) - math.pi / 2

@@ -9,6 +9,7 @@ import random
 import openpyxl
 
 WB_PATH = "/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx"
+SAVE_PATH = "/home/tanemoto/Desktop/images/owner_info.xlsx"
 
 class RememberInfo:
     # 今はあらかじめ書いてあるおかずだけ
@@ -58,7 +59,7 @@ class RememberInfo:
         for i,food in enumerate(new_want_to_eat):
             index = self.foods.index(food)+2
             self.sheet.cell(row = self.N+2, column = index, value = 'T')
-        self.wb.save(self.wb_name)
+        self.wb.save(SAVE_PATH)
 
     def check_if_known(self, food1, food2):
         print("- - - check - - -")
@@ -84,7 +85,7 @@ class TalkWith:
     def __init__(self):
         self.cb_flag = False
         self.voice = "" 
-        self.volume = 0.1 # 0.4
+        self.volume = 0.4
         self.str_candidate = ''
         self.like_list = []
         self.dislike_list = []

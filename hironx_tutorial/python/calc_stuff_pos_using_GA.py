@@ -21,9 +21,9 @@ from std_msgs.msg import Int16MultiArray
 import hiro_talk
 import cv2
 
-SAVE_NAME = "/home/tork/Desktop/images/place_output.png"
-ORDER_SAVE_NAME = "/home/tork/Desktop/images/order_output.png"
-ADD_SIZE = 10
+SAVE_NAME = "/home/tanemoto/Desktop/images/place_output.png"
+ORDER_SAVE_NAME = "/home/tanemoto/Desktop/images/order_output.png"
+ADD_SIZE = 5
 
 """
 x: width, y: height
@@ -116,7 +116,7 @@ class StuffFood():
                     capacity -= self.box_dict[i][0] * self.box_dict[i][1]
             area_percent = float(capacity) / (self.box_size[0] * self.box_size[1])
             # print(area_percent)
-            point -= area_percent * 20
+            point -= area_percent * 30
             points.append(point)
         #for_choose_parameter
         #print(points)
