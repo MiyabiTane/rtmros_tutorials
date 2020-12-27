@@ -379,8 +379,13 @@
 (defun place_cb (msg)
   (setq diff_2D_x (send msg :x))
   (setq diff_2D_y (send msg :y))
-  (setq 3D_y_size (* (/ (+ (send msg :width) 5) lbox_length) *length*))
-  (setq 3D_x_size (* (/ (+ (send msg :height) 5) lbox_length) *length*))
+  (if (= (send msg :width) 0)
+      (progn
+	(setq 3D_y_size 0.0)
+	(setq 3D_x_size 0.0))
+    (progn
+      (setq 3D_y_size (* (/ (+ (send msg :width) 5) lbox_length) *length*))
+      (setq 3D_x_size (* (/ (+ (send msg :height) 5) lbox_length) *length*))))
   (setq approach (send msg :direction))
   (format t "diff_2D_X ~A diff_2D_y ~A 3D_y_size ~A 3D_x_size ~A approach ~A~%" diff_2D_x diff_2D_y 3D_y_size 3D_x_size approach)
   (setq catch_flag t)
@@ -446,7 +451,7 @@
       (if (= (elt radi_list num) 0)
 	  ;;(setq offset (v+ *tong-offset* #f(10 0 0))) ;;tong offset
 	  (setq offset *tong-offset*)
-	(setq offset (v+ *tong-offset* #f(0 10 0))) ;;内側め
+	(setq offset (v+ *tong-offset* #f(0 15 0))) ;;内側め
 	)
       (setq fail_catch_flag nil)
       (catch-food (elt pos_list num) (elt radi_list num) offset)
@@ -454,18 +459,18 @@
 	  (place_tomato (elt place_list num) food-size)
 	(place-food (elt place_list num) target_name food-size))
       (when fail_catch_flag
-      ;; retry to catch
-      (if (or (> (elt food-size 0) 50) (> (elt food-size 1) 50))
-      (progn
-      (if (or (> (elt food-size 0) 60) (> (elt food-size 1) 60))
-	  (open-tongs 2)
-	(open-tongs 1)))
-      (open-tongs 0))
-      (setq offset (v+ offset #f(0 0 -5)))
-      (catch-food (elt pos_list num) (elt radi_list num) offset)
-      (if (string= target_name "tomato")
-	  (place_tomato (elt place_list num) food-size)
-	(place-food (elt place_list num) target_name food-size)))
+	;; retry to catch
+	(if (or (> (elt food-size 0) 50) (> (elt food-size 1) 50))
+	    (progn
+	      (if (or (> (elt food-size 0) 60) (> (elt food-size 1) 60))
+		  (open-tongs 2)
+		(open-tongs 1)))
+	  (open-tongs 0))
+	(setq offset (v+ offset #f(0 0 -5)))
+	(catch-food (elt pos_list num) (elt radi_list num) offset)
+	(if (string= target_name "tomato")
+	    (place_tomato (elt place_list num) food-size)
+	  (place-food (elt place_list num) target_name food-size)))
       )
     )
   )
