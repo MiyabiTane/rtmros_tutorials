@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(hironx_tutorial)
 
 # find_package(catkin REQUIRED)
-find_package(catkin REQUIRED COMPONENTS std_msgs geometry_msgs sensor_msgs message_generation)
+find_package(catkin REQUIRED COMPONENTS std_msgs geometry_msgs sensor_msgs jsk_recognition_msgs message_generation)
 add_message_files(DIRECTORY msg FILES
   FoodPacking.msg
   LunchBoxStatus.msg
@@ -12,7 +12,7 @@ catkin_python_setup()
 
 generate_messages(
   DEPENDENCIES
-  std_msgs geometry_msgs sensor_msgs
+  std_msgs geometry_msgs sensor_msgs jsk_recognition_msgs
   )
 
 ###################################

@@ -6,3 +6,4 @@ geometry_msgs/Point ltop  # LeftTop
 geometry_msgs/Point lbottom  # LeftBottom
 geometry_msgs/Point rtop  # RightTop
 geometry_msgs/Point rbottom  # RightBottom
+geometry_msgs/Point goal # 2D goal position

@@ -29,6 +29,9 @@ class VisualFeedback:
         self.lt_x = None; self.lt_y = None; self.lb_x = None; self.lb_y = None
         self.rt_x = None; self.rt_y = None; self.rb_x = None; self.rb_y = None
         self.bridge = CvBridge()
+        # to check the result of pulling over
+        self.pos_x = None; self.pos_y = None
+        self.width = None; self.height = None
 
         self.pub = rospy.Publisher("~output", FoodPacking, queue_size=1)
         rospy.Subscriber("~input", LunchBoxStatus, self.status_cb)
@@ -49,12 +52,14 @@ class VisualFeedback:
             self.rt_x = msg.rtop.x; self.rt_y = msg.rtop.y; self.rb_x = msg.rbottom.x; self.rb_y = msg.rbottom.y
             self.lt_x += X_OFFSET; self.lb_x += X_OFFSET; self.rt_x += X_OFFSET; self.rb_x += X_OFFSET
             self.lt_y += Y_OFFSET; self.lb_y += Y_OFFSET; self.rt_y += Y_OFFSET; self.rb_y += Y_OFFSET
-            self.publish_info()
+            if msg.goal.x == 0:
+                self.publish_info()
+            else:
+                self.publish_info(restrict=True, goal_x=msg.goal.x, goal_y=msg.goal.y)
             self.count += 1
         if self.pub_msg:
             self.pub.publish(self.pub_msg)
-            
-            
+
     def get_diff_img(self, before_img, after_img, k_size=3):
         im_diff = before_img.astype(int) - after_img.astype(int)
         im_diff_abs = np.abs(im_diff)
@@ -65,17 +70,38 @@ class VisualFeedback:
         # remove noise
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(k_size,k_size))
         img_del_noise = cv2.morphologyEx(img_binary, cv2.MORPH_OPEN, kernel)
-        return img_del_noise
+        img_closing = cv2.morphologyEx(img_del_noise, cv2.MORPH_CLOSE, kernel)
+        return img_closing
+    
+    def ignore_extra_space(self, diff_img, goal_x, goal_y):
+        start_x = self.pos_x; start_y = self.pos_y
+        width = self.width; height = self.height
+        H, W, _C = diff_img.shape
+        restrict_img = np.zeros((H, W))
+        # range 1
+        x1_1 = max(0, int(start_x - (width + 10.0) / 2))
+        x1_2 = min(W, int(start_x + (width + 10.0) / 2))
+        y1_1 = max(0, int(min(start_y, goal_y) - (height + 10.0) / 2))
+        y1_2 = min(H, int(max(start_y, goal_y) + (height + 10.0) / 2))
+        keep_img1 = diff_img[y1_1: y1_2, x1_1: x1_2]
+        # range 2
+        x2_1 = max(0, int(min(start_x, goal_x) - (width + 10.0) / 2))
+        x2_2 = min(W, int(max(start_x, goal_x) + (width + 10.0) / 2))
+        y2_1 = max(0, int(goal_y - (height + 10.0) / 2))
+        y2_2 = min(H, int(goal_y + (height + 10.0) / 2))
+        keep_img2 = diff_img[y2_1: y2_2, x2_1: x2_2]
+        # make restricted img
+        restrict_img[y1_1: y1_2, x1_1: x1_2] = keep_img1
+        restrict_img[y2_1: y2_2, x2_1: x2_2] = keep_img2
+        return restrict_img
 
-    def get_food_info(self, before_img, after_img):
-        diff_img = self.get_diff_img(before_img, after_img)
+    def get_food_info(self, diff_img):
         where = np.where(diff_img != 0)
-        boxes = []
         if len(where[0]) < 50:
             return None, None, None, None
         _, contours, _hierarchy = cv2.findContours(diff_img ,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         max_size = 0
-        box = None
+        # box = None
         if len(contours) == 0:
             return None, None, None, None
         for cnt in contours:
@@ -96,6 +122,7 @@ class VisualFeedback:
         # height = np.max(box[:, 1]) - np.min(box[:, 1])
         pos_x = x + w / 2
         pos_y = y + h / 2
+        self.pos_x = pos_x; self.pos_y = pos_y; self.width = w; self.height = h
         return pos_x, pos_y, w, h
 
     def if_can_place(self, diff_img, thresh=0.4):
@@ -167,9 +194,8 @@ class VisualFeedback:
         if not ans:
             ans_str += "overlap"
         return ans_str
-
         
-    def publish_info(self):
+    def publish_info(self, restrict=False, goal_x=-1, goal_y=-1):
         self.output_img = deepcopy(self.after_img)
         cv2.line(self.output_img, (int(self.rt_x), int(self.rt_y)), (int(self.rb_x), int(self.rb_y)), (0, 255, 0), thickness=2, lineType=cv2.LINE_4)
         cv2.line(self.output_img, (int(self.lt_x), int(self.lt_y)), (int(self.rt_x), int(self.rt_y)), (0, 255, 0), thickness=2, lineType=cv2.LINE_4)
@@ -181,7 +207,12 @@ class VisualFeedback:
         right = int((self.rt_x + self.rb_x) / 2 + EXTENTION)
         lbox_bimg = self.before_img[top: bottom, left: right, :]
         lbox_aimg = self.after_img[top: bottom, left: right, :]
-        pos_x, pos_y, width, height = self.get_food_info(lbox_bimg, lbox_aimg)
+        diff_img = self.get_diff_img(lbox_bimg, lbox_aimg)
+        if restrict:
+            goal_x = goal_x + X_OFFSET - left
+            goal_y = goal_y + Y_OFFSET - top
+            diff_img = self.ignore_extra_space(diff_img, goal_x, goal_y)
+        pos_x, pos_y, width, height = self.get_food_info(diff_img)
         if pos_x:
             direction = self.get_available_angle(self.empty_img[top: bottom, left: right, :], lbox_bimg, (pos_x, pos_y), (width, height))
             pos_x += left
