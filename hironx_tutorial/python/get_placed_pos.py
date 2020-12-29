@@ -15,6 +15,7 @@ Y_OFFSET = -15
 EXTENTION = 0
 TH2 = 15
 TH3 = 10
+EXTENTION2 = 10
 
 class VisualFeedback:
 
@@ -32,6 +33,8 @@ class VisualFeedback:
         # to check the result of pulling over
         self.pos_x = None; self.pos_y = None
         self.width = None; self.height = None
+        #for debug visualize
+        self.vis_img = None
 
         self.pub = rospy.Publisher("~output", FoodPacking, queue_size=1)
         rospy.Subscriber("~input", LunchBoxStatus, self.status_cb)
@@ -76,28 +79,34 @@ class VisualFeedback:
     def ignore_extra_space(self, diff_img, goal_x, goal_y):
         start_x = self.pos_x; start_y = self.pos_y
         width = self.width; height = self.height
-        H, W, _C = diff_img.shape
+        print("start_x {}, goal_x {}, start_y {}, goal_y {}".format(start_x, start_y, goal_x, goal_y))
+        print("width {}, height {}".format(width, height))
+        H, W = diff_img.shape
         restrict_img = np.zeros((H, W))
         # range 1
-        x1_1 = max(0, int(start_x - (width + 10.0) / 2))
-        x1_2 = min(W, int(start_x + (width + 10.0) / 2))
-        y1_1 = max(0, int(min(start_y, goal_y) - (height + 10.0) / 2))
-        y1_2 = min(H, int(max(start_y, goal_y) + (height + 10.0) / 2))
+        x1_1 = max(0, int(start_x - (width + EXTENTION2) / 2))
+        x1_2 = min(W, int(start_x + (width + EXTENTION2) / 2))
+        y1_1 = max(0, int(min(start_y, goal_y) - (height + EXTENTION2) / 2))
+        y1_2 = min(H, int(max(start_y, goal_y) + (height + EXTENTION2) / 2))
         keep_img1 = diff_img[y1_1: y1_2, x1_1: x1_2]
+        cv2.rectangle(self.vis_img, (x1_1, y1_1), (x1_2, y1_2), (255, 0, 0))
         # range 2
-        x2_1 = max(0, int(min(start_x, goal_x) - (width + 10.0) / 2))
-        x2_2 = min(W, int(max(start_x, goal_x) + (width + 10.0) / 2))
-        y2_1 = max(0, int(goal_y - (height + 10.0) / 2))
-        y2_2 = min(H, int(goal_y + (height + 10.0) / 2))
+        x2_1 = max(0, int(min(start_x, goal_x) - (width + EXTENTION2) / 2))
+        x2_2 = min(W, int(max(start_x, goal_x) + (width + EXTENTION2) / 2))
+        y2_1 = max(0, int(goal_y - (height + EXTENTION2) / 2))
+        y2_2 = min(H, int(goal_y + (height + EXTENTION2) / 2))
         keep_img2 = diff_img[y2_1: y2_2, x2_1: x2_2]
+        cv2.rectangle(self.vis_img, (x2_1, y2_1), (x2_2, y2_2), (255, 0, 0))
         # make restricted img
         restrict_img[y1_1: y1_2, x1_1: x1_2] = keep_img1
         restrict_img[y2_1: y2_2, x2_1: x2_2] = keep_img2
+        restrict_img = restrict_img.astype(np.uint8)
+        # cv2.imwrite("/home/tanemoto/Desktop/images/diff_restrict_" + str(self.count) + ".png", restrict_img)
         return restrict_img
 
     def get_food_info(self, diff_img):
         where = np.where(diff_img != 0)
-        if len(where[0]) < 50:
+        if len(where[0]) < 30:
             return None, None, None, None
         _, contours, _hierarchy = cv2.findContours(diff_img ,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         max_size = 0
@@ -114,7 +123,7 @@ class VisualFeedback:
         # print("BOX: {}".format(box))
         cv2.imwrite("/home/tanemoto/Desktop/images/diff_" + str(self.count) + ".png", diff_img)
         # vis_img = cv2.drawContours(after_img, [box], 0, (0,0,255), 2)
-        vis_img = cv2.rectangle(after_img,(x,y),(x+w,y+h),(0,0,255),2)
+        vis_img = cv2.rectangle(self.vis_img,(x,y),(x+w,y+h),(0,0,255),2)
         cv2.imwrite("/home/tanemoto/Desktop/images/diff_box_" + str(self.count) + ".png", vis_img)
         # pos_x = np.mean(box[:, 0])
         # pos_y = np.mean(box[:, 1])
@@ -207,6 +216,7 @@ class VisualFeedback:
         right = int((self.rt_x + self.rb_x) / 2 + EXTENTION)
         lbox_bimg = self.before_img[top: bottom, left: right, :]
         lbox_aimg = self.after_img[top: bottom, left: right, :]
+        self.vis_img = deepcopy(lbox_aimg)
         diff_img = self.get_diff_img(lbox_bimg, lbox_aimg)
         if restrict:
             goal_x = goal_x + X_OFFSET - left

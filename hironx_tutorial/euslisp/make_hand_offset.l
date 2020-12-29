@@ -87,6 +87,15 @@
   (send-robot)
   )
 
+(defun move-to-chops ()
+  (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
+  (setq *move* (v- *coords* (send *hiro-pose* :pos)))
+  (send *hiro-pose* :translate *move* :world)
+  (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 100) :world)
+  (send-robot)
+  )
+
 ;;---------------grasp force-----------------
 (defun move-to-right-hand ()
   (setq *tong-offset* #f(-39.159 -114.508 100.161))
