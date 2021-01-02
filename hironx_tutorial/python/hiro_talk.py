@@ -9,7 +9,8 @@ import random
 import openpyxl
 
 WB_PATH = "/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx"
-SAVE_PATH = "/home/tanemoto/Desktop/images/owner_info.xlsx"
+SAVE_PATH = "/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx"
+#"/home/tanemoto/Desktop/images/owner_info.xlsx"
 
 class RememberInfo:
     # 今はあらかじめ書いてあるおかずだけ

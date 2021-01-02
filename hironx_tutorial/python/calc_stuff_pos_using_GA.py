@@ -290,7 +290,7 @@ def visualize_place_order(box_list, open_name, save_name, best_stuff, order_lst)
     cv2.imwrite(save_name, img)
 
 
-def GA_main(name_list, box_list, box_size, like_list, dislike_list, want_to_eat, indivisuals=20, generation=200, elite=6, change_direc=7):
+def GA_main(name_list, box_list, box_size, like_list, dislike_list, want_to_eat, indivisuals=20, generation=200, elite=6, change_direc=10):
     cur_box_list = box_list
     max_point = -10000
     best_stuff = None
@@ -379,7 +379,13 @@ def main():
     box_size, name_list, box_list = visual_info.get_vis_info()
     #subscribe info from talking
     like_list, dislike_list, want_to_eat = get_talk_info(name_list)
+    #like_list = [["tomato", "tomato"]]
+    #dislike_list = [["tomato", "tomato"]]
+    #want_to_eat = [["tomato"]]
     #calc stuff pos using GA and BL
+    print("like_list : ", like_list)
+    print("dislike_list : ", dislike_list)
+    print("want_to_eat : ",want_to_eat)
     best_stuff, order_lst = GA_main(name_list, box_list, box_size, like_list, dislike_list, want_to_eat)
     #publish stuff canter coords and box width and height
     pub = rospy.Publisher('/stuff_food_pos', PoseArray, queue_size = 1)
