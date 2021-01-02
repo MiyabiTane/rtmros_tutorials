@@ -9,8 +9,6 @@ import random
 import openpyxl
 
 WB_PATH = "/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx"
-SAVE_PATH = "/home/tanemoto/hiro_ws/src/rtmros_tutorials/hironx_tutorial/python/owner_info.xlsx"
-#"/home/tanemoto/Desktop/images/owner_info.xlsx"
 
 class RememberInfo:
     # 今はあらかじめ書いてあるおかずだけ
@@ -60,7 +58,7 @@ class RememberInfo:
         for i,food in enumerate(new_want_to_eat):
             index = self.foods.index(food)+2
             self.sheet.cell(row = self.N+2, column = index, value = 'T')
-        self.wb.save(SAVE_PATH)
+        self.wb.save(self.wb_name)
 
     def check_if_known(self, food1, food2):
         print("- - - check - - -")
