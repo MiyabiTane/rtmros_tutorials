@@ -40,7 +40,7 @@
     )
   (format t "finish loop~%")
   (setq *catch-z* (elt (send (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords) :pos) 2))
-  (setq *catch-z* (+ *catch-z* 2))
+  ;;(setq *catch-z* (+ *catch-z* 2))
   (format t "catch-z ~A~%" *catch-z*)
   )
 
