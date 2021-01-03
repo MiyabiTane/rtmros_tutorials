@@ -434,7 +434,7 @@
     (format t "distance to target ~A ~A~%" (abs (- target_x cur_x)) (abs (- target_y cur_y)))
     (setq rot_flag nil)
     (when (and (< pull_count 5) (or (or (> (abs (- target_x cur_x)) 15) (> (abs (- target_y cur_y)) 15)) (= pull_count 1)))
-      (if (and (<= (abs (- target_x cur_x)) 20) (not (= radi 0)))
+      (if (and (<= (abs (- target_x cur_x)) 20) (= radi 0))
 	  (setq rot_flag t))
       (send *hironxjsk* :larm :move-end-pos (scale -1 (float-vector diff_x diff_y 0)) :world)
       (send-robot)
