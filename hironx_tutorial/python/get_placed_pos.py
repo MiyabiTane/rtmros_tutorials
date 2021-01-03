@@ -51,6 +51,8 @@ class VisualFeedback:
             self.empty_img = self.bridge.imgmsg_to_cv2(msg.empty, desired_encoding="bgr8")
             self.before_img = self.bridge.imgmsg_to_cv2(msg.before, desired_encoding="bgr8")
             self.after_img = self.bridge.imgmsg_to_cv2(msg.after, desired_encoding="bgr8")
+            cv2.imwrite("/home/tanemoto/Desktop/images/output_before" + str(self.count) + ".png", self.before_img)
+            cv2.imwrite("/home/tanemoto/Desktop/images/output_after" + str(self.count) + ".png", self.after_img)
             self.lt_x = msg.ltop.x; self.lt_y = msg.ltop.y; self.lb_x = msg.lbottom.x; self.lb_y = msg.lbottom.y
             self.rt_x = msg.rtop.x; self.rt_y = msg.rtop.y; self.rb_x = msg.rbottom.x; self.rb_y = msg.rbottom.y
             self.lt_x += X_OFFSET; self.lb_x += X_OFFSET; self.rt_x += X_OFFSET; self.rb_x += X_OFFSET
