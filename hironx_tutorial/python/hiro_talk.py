@@ -84,7 +84,7 @@ class TalkWith:
     def __init__(self):
         self.cb_flag = False
         self.voice = "" 
-        self.volume = 0.4
+        self.volume = 0.3
         self.str_candidate = ''
         self.like_list = []
         self.dislike_list = []

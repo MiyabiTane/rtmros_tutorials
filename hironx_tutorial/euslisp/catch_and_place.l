@@ -70,7 +70,7 @@
   (setq target-chop-coords (send chop-coords :copy-worldcoords))
   (send target-chop-coords :rotate radi :z :world)
   (send *hironxjsk* :larm :inverse-kinematics target-chop-coords :move-target chop-coords)
-  (send *hironxjsk* :larm :move-end-pos #f(0 10 0) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(10 10 0) :world)
   (send-robot)
   )
 
@@ -190,9 +190,9 @@
       (send *ri* :hand-width :rhand (+ cur_width 5)))
   (send *hironxjsk* :larm :angle-vector #f(-23.0357 -4.54163 -114.595 -28.9565 -8.97938 11.3799))
   (send-robot)
-  ;;(send *hironxjsk* :larm :move-end-pos #f(10 10 0) :world)
-  ;;(send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -90) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(0 5 0) :world)
+  (send-robot)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -85) :world)
   (send-robot)
   (close-chops)
   ;;(setq close-size (- (min (elt food-size 0) (elt food-size 1)) 15))
@@ -230,9 +230,11 @@
   (setq *move* (v- pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :rarm :inverse-kinematics *hiro-pose*)
-  (send *hironxjsk* :rarm :move-end-pos #f(10 0 55) :world)
+  (send *hironxjsk* :rarm :move-end-pos #f(0 0 55) :world)
   (send-robot)
   ;;push
+  (send *hironxjsk* :rarm :move-end-pos #f(20 0 0) :world)
+  (send-robot)
   (place-in "tomato" #f(0 0 -25))
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 60) :world)
   (send-robot)
@@ -286,7 +288,7 @@
 	 (setq choice 0))
 	((substringp "left" approach)
 	 (setq choice 1))
-	((and (substringp "left" approach) (substringp "right" approach))
+	((and (substringp "top" approach) (substringp "bottom" approach))
 	 (setq choice 2)))
   (cond ((= choice 0)
 	 (send *hironxjsk* :larm :move-end-pos (float-vector 0 (* -1 (+ (/ 3D_width 2) 5)) 0) :world)
@@ -294,7 +296,7 @@
 	 (close-chops-absolute) ;;お弁当箱からはみ出さないように
 	 (send *hironxjsk* :larm :move-end-pos #f(0 0 -75) :world)
 	 (send-robot)
-	 (open-chops (+ 3D_width OPEN_TH))
+	 (open-chops (+ 3D_length OPEN_TH))
 	 (send *hironxjsk* :larm :move-end-pos (float-vector 0 (+ (/ 3D_width 2) 5) 0) :world)
 	 (send-robot))
 	((= choice 1)
@@ -303,7 +305,7 @@
 	 (close-chops-absolute) ;;お弁当箱からはみ出さないように
 	 (send *hironxjsk* :larm :move-end-pos #f(0 0 -75) :world)
 	 (send-robot)
-	 (open-chops (+ 3D_width OPEN_TH))
+	 (open-chops (+ 3D_length OPEN_TH))
 	 (send *hironxjsk* :larm :move-end-pos (float-vector 0 (* -1 (+ (/ 3D_width 2) 5)) 0) :world)
 	 (send-robot))
 	((= choice 2)
@@ -494,12 +496,13 @@
   (send-robot)
   (send *hironxjsk* :rarm :move-end-pos down_vec :world)
   (send-robot)
-  ;;open-hand
-  (setq cur_hand (send *ri* :hand-angle-vector :rhand))
-  (send *hironxjsk* :hand-angle-vector :rhand (v+ cur_hand #f(15 -15 -15 15)))
-  (send-right-hand 2.0)
-  (send *hironxjsk* :rarm :move-end-pos (scale -1 down_vec) :world)
-  (send-robot)
+  (when (not (string= name "tomato"))
+    ;;open-hand
+    (setq cur_hand (send *ri* :hand-angle-vector :rhand))
+    (send *hironxjsk* :hand-angle-vector :rhand (v+ cur_hand #f(15 -15 -15 15)))
+    (send-right-hand 2.0)
+    (send *hironxjsk* :rarm :move-end-pos (scale -1 down_vec) :world)
+    (send-robot))
   ;;元に戻す
   (send target-tong-coords :rotate 170 :x :world)
   (send *hironxjsk* :rarm :inverse-kinematics target-tong-coords :move-target tong-coords)
@@ -530,7 +533,7 @@
   (send *hironxjsk* :rarm :inverse-kinematics *hiro-pose*)
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 80) :world)
   (send-robot)
-  (place-in name #f(0 0 -45))
+  (place-in name #f(0 10 -45))
   ;;手をよけて置かれた位置を認識する
   (send *hironxjsk* :rarm :move-end-pos #f(0 -200 0) :world)
   (send-robot)
@@ -574,8 +577,8 @@
 	(open-tongs 0))
       (sub-img 0)
       (if (= (elt radi_list num) 0)
-	  ;;(setq offset (v+ *tong-offset* #f(10 0 0))) ;;tong offset
-	  (setq offset *tong-offset*)
+	  (setq offset (v+ *tong-offset* #f(10 0 0))) ;;tong offset
+	  ;;(setq offset *tong-offset*)
 	(setq offset (v+ *tong-offset* #f(0 15 0))) ;;内側め
 	)
       (setq fail_catch_flag nil)
