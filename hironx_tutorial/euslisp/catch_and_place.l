@@ -301,7 +301,7 @@
   (if (= 3D_width 0)
       (setq fail_catch_flag t)
     (progn
-      (move_to_target pos diff_x diff_y 3D_width 3D_length approach)
+      (move_to_lbcenter pos diff_x diff_y 3D_width 3D_length approach)
       (roll_tomato diff_x diff_y 3D_width 3D_length target_x target_y)))
   )
 
@@ -322,11 +322,11 @@
 	 (ros::spin-once)
 	 (ros::sleep))
   (ros::unsubscribe "/get_placed_pos/output")
-  (move_to_target pos diff_x diff_y 3D_width 3D_length approach)
+  (move_to_lbcenter pos diff_x diff_y 3D_width 3D_length approach)
   (pull_over pos diff_x diff_y 3D_width 3D_length food-size approach)
   )
 
-(defun catch_target_rotated (diff_x diff_y 3D_width 3D_length 3D_height target_x target_y approach)
+(defun catch_target_rotated (diff_x diff_y 3D_width 3D_length target_x target_y approach)
   (rotate-chops (* -1 (/ pi 2)))
   (setq choice -1)
   (setq cur_hiro_coords (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
@@ -376,7 +376,7 @@
 	    (catch-retry 3D_width #f(0 -20 50))))))
   )
 
-(defun catch_target (diff_x diff_y 3D_width 3D_length 3D_height target_x target_y approach)
+(defun catch_target (diff_x diff_y 3D_width 3D_length target_x target_y approach)
   (setq choice -1)
   (setq cur_hiro_coords (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
   (setq cur_chop_coords (v- cur_hiro_coords *chopstick-offset*))
@@ -425,7 +425,7 @@
 	    (catch-retry 3D_width #f(-20 0 50))))))
   )
 
-(defun remove_overlap (diff_x diff_y 3D_width 3D_length 3D_height target_x target_y approach)
+(defun remove_overlap (diff_x diff_y 3D_width 3D_length target_x target_y approach)
   (rotate-chops (* -1 (/ pi 2)))
   (open-chops (- 3D_width 10))
   (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
@@ -498,7 +498,7 @@
     (send-robot))
   )
 
-(defun move_to_target (pos diff_x diff_y 3D_width 3D_length approach)
+(defun move_to_lbcenter (pos diff_x diff_y 3D_width 3D_length approach)
   ;;pos GAでの座標 x->x, y->-y
   ;;おかずはお弁当箱の真ん中に置かれる
   (setq target_x (+ *front* (elt pos 0)))
@@ -522,6 +522,8 @@
   (setq pull_flag nil)
   (setq rot_flag nil)
 
+  (setq target_x (+ *front* (elt pos 0)))
+  (setq target_y  (- *left* (elt pos 1)))
   (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
   (setq cur_hiro_coords (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
   (setq cur_chop_coords (v- cur_hiro_coords *chopstick-offset*))
@@ -532,20 +534,21 @@
   (if (= pull_count 1)
       (if (substringp "overlap" approach)
 	  (progn
-	    (remove_overlap diff_x diff_y 3D_width 3D_length 3D_height target_x target_y approach)
+	    (remove_overlap diff_x diff_y 3D_width 3D_length target_x target_y approach)
 	    (check-status pos food-size))
-	(setq pull_flag t))
+	(progn
+	  (setq pull_count 0)
+	  (setq pull_flag t)))
     ;;２〜４回目でもまだ目標位置に達していなければ幅寄せする
     (if (and (or (> (abs (- target_x cur_x)) 15) (> (abs (- target_y cur_y)) 15)) (< pull_count 5))
 	(setq pull_flag t))
     )
-  (when (not pull_flag)
+  (unless pull_flag
     ;;縦長な食材は整える
-    (if (>= (/ (float (elt food-size 0)) (elt food-size 1)) 1.5)
-	(if (= arrange_count 0)
-	    (arrange diff_x diff_y 3D_width 3D_length approach (- target_y cur_y))))
-    (when pull_flag
-    (if (and (<= (abs (- target_x cur_x)) 15) (= radi 0))
+    (if (and (>= (/ (float (elt food-size 0)) (elt food-size 1)) 1.5) (= arrange_couont 0))
+	(arrange diff_x diff_y 3D_width 3D_length approach (- target_y cur_y))))
+  (when pull_flag
+    (if (and (<= (abs (- target_x cur_x)) 15) (< (/ (float (elt food-size 0)) (elt food-size 1)) 1.5))
 	(setq rot_flag t))
     (send *hironxjsk* :larm :move-end-pos (scale -1 (float-vector diff_x diff_y 0)) :world)
     (send-robot)
@@ -555,15 +558,15 @@
 	  (when  (or (or (substringp "left" approach) (substringp "right" approach))
 		     (and (substringp "bottom" approach) (substringp "top" approach)))
 	    (open-chops (+ 3D_length OPEN_TH))
-	    (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
-	    (catch_target_rotated diff_x diff_y 3D_width 3D_length 3D_height target_x target_y approach)
-	    (setq flag t)))
+	      (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
+	      (catch_target_rotated diff_x diff_y 3D_width 3D_length target_x target_y approach)
+	      (setq flag t)))
       (progn
 	(when (or (or (substringp "top" approach) (substringp "bottom" approach))
 		  (and (substringp "left" approach) (substringp "right" approach)))
 	  (open-chops (+ 3D_width OPEN_TH))
 	  (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
-	  (catch_target diff_x diff_y 3D_width 3D_length 3D_height target_x target_y approach)
+	  (catch_target diff_x diff_y 3D_width 3D_length target_x target_y approach)
 	  (setq flag t))))
     (when flag
       ;;ここから幅寄せ
@@ -590,7 +593,7 @@
 	    (send *hironxjsk* :larm :move-end-pos #f(0 5 0) :world))
 	(if (> (- target_x cur_x) 0)
 	    (send *hironxjsk* :larm :move-end-pos #f(-5 0 0) :world)
-	  (send *hironxjsk* :larm :move-end-pos #f(5 0 0) :world))
+	    (send *hironxjsk* :larm :move-end-pos #f(5 0 0) :world))
 	)
       (send-robot)
       (send *hironxjsk* :larm :move-end-pos #f(0 0 70) :world)
@@ -674,7 +677,7 @@
   (ros::unsubscribe "/get_placed_pos/output")
   (if (not (= 3D_width 0))
       (progn
-	(move_to_target pos diff_x diff_y 3D_width 3D_length approach)
+	(move_to_lbcenter pos diff_x diff_y 3D_width 3D_length approach)
 	(pull_over pos diff_x diff_y 3D_width 3D_length food-size approach))
     (setq fail_catch_flag t))
   (place-init-pose)
@@ -715,6 +718,7 @@
       (if (string= target_name "tomato")
 	  (place_tomato (elt place_list num) food-size)
 	(place-food (elt place_list num) target_name food-size (elt radi_list num)))
+      (setq offset (v+ offset #f(0 0 -5)))
       (while fail_catch_flag
 	;; retry to catch
 	(setq fail_catch_flag nil)
@@ -724,7 +728,6 @@
 		  (open-tongs 2)
 		(open-tongs 1)))
 	  (open-tongs 0))
-	(setq offset (v+ offset #f(0 0 -5)))
 	(catch-food (elt pos_list num) (elt radi_list num) offset)
 	(if (string= target_name "tomato")
 	    (place_tomato (elt place_list num) food-size)
