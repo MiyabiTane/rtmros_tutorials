@@ -198,6 +198,17 @@
   )
 
 (defun roll_tomato (diff_x diff_y 3D_width 3D_length target_x target_y)
+  ;;pos GAでの座標 x->x, y->-y
+  ;;おかずはお弁当箱の真ん中に置かれる
+  (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
+  (setq start-pos (v+ lbox_pos (float-vector 0 0 (+ *G-z* 60))))
+  (setq start-pos (v+ start-pos *chopstick-offset*))
+  (setq *move* (v- start-pos (send *hiro-pose* :pos)))
+  (send *hiro-pose* :translate *move* :world)
+  (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
+
+  (setq target_x (+ *front* (elt pos 0)))
+  (setq target_y  (- *left* (elt pos 1)))
   (send *hironxjsk* :larm :move-end-pos (float-vector diff_x diff_y 0) :world)
   (setq cur_hiro_coords (send (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords) :pos))
   (setq cur_chop_coords (v- cur_hiro_coords *chopstick-offset*))
@@ -300,9 +311,8 @@
   (ros::unsubscribe "/get_placed_pos/output")
   (if (= 3D_width 0)
       (setq fail_catch_flag t)
-    (progn
-      (move_to_lbcenter pos diff_x diff_y 3D_width 3D_length approach)
-      (roll_tomato diff_x diff_y 3D_width 3D_length target_x target_y)))
+    (if (substringp "overlap" approach)
+	(roll_tomato diff_x diff_y 3D_width 3D_length target_x target_y)))
   )
 
 (defun check-status (pos food-size)
@@ -322,7 +332,6 @@
 	 (ros::spin-once)
 	 (ros::sleep))
   (ros::unsubscribe "/get_placed_pos/output")
-  (move_to_lbcenter pos diff_x diff_y 3D_width 3D_length approach)
   (pull_over pos diff_x diff_y 3D_width 3D_length food-size approach)
   )
 
@@ -447,6 +456,16 @@
     (send-robot)
     (send *hironxjsk* :larm :move-end-pos #f(0 0 45) :world)
     (send-robot))
+  (place-init-pose)
+  (sub-img 1)
+  (send (send pub_status_msg :header) :stamp (ros::time-now))
+  (ros::subscribe "/get_placed_pos/output" hironx_tutorial::FoodPacking #'place_cb)
+  (setq catch_flag nil)
+  (until catch_flag
+	 (ros::publish "/get_placed_pos/input" pub_status_msg)
+	 (ros::spin-once)
+	 (ros::sleep))
+  (ros::unsubscribe "/get_placed_pos/output")
   )
 
 (defun arrange (diff_x diff_y 3D_width 3D_length approach distance)
@@ -498,26 +517,16 @@
     (send-robot))
   )
 
-(defun move_to_lbcenter (pos diff_x diff_y 3D_width 3D_length approach)
+(defun pull_over (pos diff_x diff_y 3D_width 3D_length food-size approach)
   ;;pos GAでの座標 x->x, y->-y
   ;;おかずはお弁当箱の真ん中に置かれる
-  (setq target_x (+ *front* (elt pos 0)))
-  (setq target_y  (- *left* (elt pos 1)))
-  (setq center_x (/ *length* 2))
-  (setq center_y (/ *width* 2))
-  ;;置く時にずれた分
-  (setq center_x (+ center_x diff_x))
-  (setq center_y (+ center_y diff_y))
- 
   (setq *hiro-pose* (send (send *hironxjsk* :larm :end-coords) :copy-worldcoords))
   (setq start-pos (v+ lbox_pos (float-vector 0 0 (+ *G-z* 60))))
   (setq start-pos (v+ start-pos *chopstick-offset*))
   (setq *move* (v- start-pos (send *hiro-pose* :pos)))
   (send *hiro-pose* :translate *move* :world)
   (send *hironxjsk* :larm :inverse-kinematics *hiro-pose*)
-  )
 
-(defun pull_over (pos diff_x diff_y 3D_width 3D_length food-size approach)
   (setq pull_count (+ pull_count 1))
   (setq pull_flag nil)
   (setq rot_flag nil)
@@ -535,18 +544,17 @@
       (if (substringp "overlap" approach)
 	  (progn
 	    (remove_overlap diff_x diff_y 3D_width 3D_length target_x target_y approach)
-	    (check-status pos food-size))
-	(progn
-	  (setq pull_count 0)
-	  (setq pull_flag t)))
+	    (pull_over pos diff_x diff_y 3D_width 3D_length food-size approach))
+	(setq pull_flag t))
     ;;２〜４回目でもまだ目標位置に達していなければ幅寄せする
     (if (and (or (> (abs (- target_x cur_x)) 15) (> (abs (- target_y cur_y)) 15)) (< pull_count 5))
 	(setq pull_flag t))
     )
   (unless pull_flag
     ;;縦長な食材は整える
-    (if (and (>= (/ (float (elt food-size 0)) (elt food-size 1)) 1.5) (= arrange_couont 0))
-	(arrange diff_x diff_y 3D_width 3D_length approach (- target_y cur_y))))
+    (if (and (< pull_count 5) (= arrange_count 0))
+	(if (>= (/ (float (elt food-size 0)) (elt food-size 1)) 1.5)
+	    (arrange diff_x diff_y 3D_width 3D_length approach (- target_y cur_y)))))
   (when pull_flag
     (if (and (<= (abs (- target_x cur_x)) 15) (< (/ (float (elt food-size 0)) (elt food-size 1)) 1.5))
 	(setq rot_flag t))
@@ -676,9 +684,7 @@
 	 (ros::sleep))
   (ros::unsubscribe "/get_placed_pos/output")
   (if (not (= 3D_width 0))
-      (progn
-	(move_to_lbcenter pos diff_x diff_y 3D_width 3D_length approach)
-	(pull_over pos diff_x diff_y 3D_width 3D_length food-size approach))
+      (pull_over pos diff_x diff_y 3D_width 3D_length food-size approach)
     (setq fail_catch_flag t))
   (place-init-pose)
   )
