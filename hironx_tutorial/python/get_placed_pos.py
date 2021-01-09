@@ -10,12 +10,14 @@ import numpy as np
 from copy import deepcopy
 
 TH = 50
-X_OFFSET = 0
-Y_OFFSET = -15
+X_OFFSET = -3
+Y_OFFSET = -5
 EXTENTION = 0
 TH2 = 15
 TH3 = 10
 EXTENTION2 = 10
+KER_1 = 3
+KER_2 = 3
 
 class VisualFeedback:
 
@@ -65,7 +67,7 @@ class VisualFeedback:
         if self.pub_msg:
             self.pub.publish(self.pub_msg)
 
-    def get_diff_img(self, before_img, after_img, k_size=3):
+    def get_diff_img(self, before_img, after_img, k_size=KER_1, k_size2=KER_2):
         im_diff = before_img.astype(int) - after_img.astype(int)
         im_diff_abs = np.abs(im_diff)
         im_diff_img = im_diff_abs.astype(np.uint8)
@@ -74,8 +76,9 @@ class VisualFeedback:
         _, img_binary = cv2.threshold(img_gray, 1, 255, cv2.THRESH_BINARY)
         # remove noise
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(k_size,k_size))
-        img_del_noise = cv2.morphologyEx(img_binary, cv2.MORPH_OPEN, kernel)
-        img_closing = cv2.morphologyEx(img_del_noise, cv2.MORPH_CLOSE, kernel)
+        kernel2 = cv2.getStructuringElement(cv2.MORPH_RECT,(k_size2,k_size2))
+        img_opening = cv2.morphologyEx(img_binary, cv2.MORPH_OPEN, kernel)
+        img_closing = cv2.morphologyEx(img_opening, cv2.MORPH_CLOSE, kernel2)
         return img_closing
     
     def ignore_extra_space(self, diff_img, goal_x, goal_y):

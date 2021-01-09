@@ -71,6 +71,7 @@ class ImageProcessing:
         img_gray = cv2.cvtColor(black_img, cv2.COLOR_BGR2GRAY)
         # draw others black
         _thre, bw_img = cv2.threshold(img_gray, 1, 255, cv2.THRESH_BINARY)
+        cv2.imwrite("/home/tanemoto/Desktop/images/output_binary.png", bw_img)
         # get contours
         # if opencv version is latest, _, contours, _hierarchy -> contours, _hierarchy
         _, contours, _hierarchy = cv2.findContours(bw_img ,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)

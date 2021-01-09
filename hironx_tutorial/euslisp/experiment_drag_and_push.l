@@ -103,13 +103,13 @@
 (load "recognize_lunchbox.l")
 ;;(recognize_lunchbox_main)
 
-(setq *G-z* -52.3231)
-(setq right 80.5908)
-(setq back 457.384)
-(setq *left* 180.657)
-(setq *front* 342.599)
-(setq *length* 114.785)
-(setq *width* 100.066)
+(setq *G-z* -45.5393)
+(setq right 50.9496)
+(setq back 480.185)
+(setq *left* 145.999)
+(setq *front* 375.327)
+(setq *length* 104.858)
+(setq *width* 95.0489)
 
 (format t "G-z ~A~%" *G-z*)
 (format t "right ~A back ~A~%" right back)
@@ -119,21 +119,38 @@
 (setq *catch-z* 0)
 
 (load "get_foods_info.l")
-(get_foods_info_main)
+;;(get_foods_info_main)
+(get-lbox-coords)
+(setq radi_list (list 0 0))
+(setq name_list (list "tomato" "tomato"))
+(setq box_list (list (list 28.8451 24.9597 36.2208) (list 28.8451 24.9597 36.2208)))
+(setq pos_list (list #f(308.31 24.7863 -73.9793) #f(308.31 24.7863 -73.9793)))
 
 ;; ----ここに情報を手入力する-----
-;;(setq name_list (list "rolled_egg" "rolled_egg" "fried_chicken" "tomato" "broccoli" "broccoli" "tomato" "fried_chicken" "tomato" "tomato")) ;;"fried_chicken" "tomato" "tomato"))
-;;(setq box_list (list (list 67.3376 34.1309 27.2797) (list 67.1005 33.2087 25.3866) (list 41.7253 42.171 26.0795) (list 32.3176 29.6084 25.6023) (list 43.0249 37.014 31.8576) (list 42.2204 47.1033 26.6139) (list 28.531 35.8058 28.0338) (list 43.7579 41.9366 26.4388) (list 27.191 34.4848 28.5558) (list 29.4047 33.6799 2.47896))) ;;(list 38.5252 46.6802 37.1121) (list 27.191 34.4848 28.5558) (list 29.4047 33.6799 2.47896)))
-(setq pre_name_list (list "tomato" "tomato" "broccoli" "broccoli" "fried_chicken" "fried_chicken" "rolled_egg" "rolled_egg" "octopus_wiener" "octopus_wiener"))
-(setq pre_box_list (list (list 27.0145 36.123 30.4755) (list 28.0106 33.8311 33.2695) (list 45.0872 37.681 24.1513) (list 33.8893 36.7995 23.8663) (list 35.5316 41.5575 26.7719) (list 36.559 44.3106 30.3144) (list 64.1084 29.1797 25.4524) (list 67.8967 37.9132 26.0683) (list 22.4268 22.4268 3.05885) (list 20.9132 25.2793 30.3283)))
+(setq pre_name_list (list "fried_chicken" "rolled_egg" "broccoli" "octopus_wiener" "broccoli"))
+(setq pre_box_list (list (list 45.3886 45.2212 27.5869) (list 68.0041 37.0235 20.7607) (list 35.6604 37.4197 33.5302) (list 28.8451 24.9597 36.2208) (list 35.6604 37.4197 33.5302)))
+(setq pre_radi_list (list 0 0 0 0 0))
+(setq pre_pos_list (list 0 0 0 0 0))
 ;; ------------------------------
+;;"broccoli" (list 35.1378 48.657 42.2121)
+(setq plen (length pre_name_list))
 
 (dotimes (i (length name_list))
   (setq pre_name_list (append pre_name_list (list (elt name_list i))))
   (setq pre_box_list (list-insert (elt box_list i) (length pre_box_list) pre_box_list))
+  (setq pre_radi_list (append pre_radi_list (list (elt radi_list i))))
+  (setq pre_pos_list (list-insert (elt pos_list i) (length pre_pos_list) pre_pos_list))
   )
+
 (setq name_list pre_name_list)
 (setq box_list pre_box_list)
+(setq pos_list pre_pos_list)
+(setq radi_list pre_radi_list)
+
+(format t "name_list ~A~%" name_list)
+(format t "pos_list ~A~%" pos_list)
+(format t "box_list ~A~%" box_list)
+(format t "radi_list ~A~%" radi_list)
 
 ;;publish food info and lunchbox info
 (load "info_publisher.l")
@@ -146,6 +163,7 @@
 (result_subscriber_main)
 
 (load "catch_and_place.l")
+(setq lbox_pos (float-vector (/ (+ *front* back) 2) (/ (+ *left* right) 2) 0))
 (setq *tong-offset* #f(-20.23 -114.702 90.2251))
 (setq *chopstick-offset* #f(-12.624 18.437 84.2388))
 (setq *chopstick-offset-r* #f(-25.065 34.9855 84.2388)) ;;100.135))
@@ -154,6 +172,10 @@
 (pub-lbox-coords)
 (sub-img 2)
 (dotimes (i (length order_list))
+  (when (= i 4)
+    (format t "SET UP~%")
+    (ros::duration-sleep 10))
+  (place-init-pose)
   (setq num (elt order_list i))
   (format t "num : ~A~%" num)
   (when (> (elt (elt place_list num) 0) 0)
@@ -179,11 +201,11 @@
     ;;実験用：トマト以外は手動で置く
     (if (string= target_name "tomato")
 	(progn
-	  (catch-food (elt pos_list num) (elt radi_list num) offset)
+	  (pick-food (elt pos_list num) (elt radi_list num) offset)
 	  (place_tomato (elt place_list num) food-size))
       (progn
 	(format t "PLEASE PUT FOOD in 10 seconds~%")
-	(ros::duration-sleep 10.0)
+	(ros::duration-sleep 1.0)
 	(sub-img 1)
 	(send (send pub_status_msg :header) :stamp (ros::time-now))
 	(ros::subscribe "/get_placed_pos/output" hironx_tutorial::FoodPacking #'place_cb)
@@ -194,12 +216,17 @@
 	       (ros::sleep))
 	(ros::unsubscribe "/get_placed_pos/output")
 	(if (not (= 3D_width 0))
-	    (pull_over pos diff_x diff_y 3D_width 3D_length food-size approach)
+	    (pull_over (elt place_list num) diff_x diff_y 3D_width 3D_length food-size approach)
 	  (setq fail_catch_flag t)))
       )
-    (setq offset (v+ offset #f(0 0 -5)))
-    (while fail_catch_flag
+    (setq retry_count 0)
+    (while (and fail_catch_flag (string= target_name "tomato"))
       ;; retry to catch
+      (setq retry_count (+ retry_count 1))
+      (if (= retry_count 1)
+	  (setq offset (v+ offset #f(0 0 -5)))
+	(if (= retry_count 2)
+	    (setq offset (v+ offset #f(0 0 10)))))
       (setq fail_catch_flag nil)
       (if (or (> (elt food-size 0) 50) (> (elt food-size 1) 50))
 	  (progn
@@ -207,11 +234,10 @@
 		(open-tongs 2)
 	      (open-tongs 1)))
 	(open-tongs 0))
-      (catch-food (elt pos_list num) (elt radi_list num) offset)
+      (pick-food (elt pos_list num) (elt radi_list num) offset)
       (if (string= target_name "tomato")
 	  (place_tomato (elt place_list num) food-size)
-	(place-food (elt place_list num) target_name food-size (elt radi_list num)))
-      )
+	(place-food (elt place_list num) target_name food-size)))
     )
   )
 
