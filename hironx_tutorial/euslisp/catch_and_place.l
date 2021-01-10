@@ -553,7 +553,8 @@
       (if (substringp "overlap" approach)
 	  (progn
 	    (remove_overlap diff_x diff_y 3D_width 3D_length target_x target_y approach)
-	    (pull_over pos diff_x diff_y 3D_width 3D_length food-size approach))
+	    (if (< (/ (float (elt food-size 0)) (elt food-size 1)) 1.5)
+		(pull_over pos diff_x diff_y 3D_width 3D_length food-size approach)))
 	(setq pull_flag t))
     ;;２〜４回目でもまだ目標位置に達していなければ幅寄せする
     (if (and (or (> (abs (- target_x cur_x)) 15) (> (abs (- target_y cur_y)) 15)) (< pull_count 5))
@@ -561,7 +562,7 @@
     )
   (unless pull_flag
     ;;縦長な食材は整える
-    (if (= arrange_count 0)
+    (if (and (= arrange_count 0) (not (and (= pull_count 1) (substringp "overlap" approach))))
 	(if (>= (/ (float (elt food-size 0)) (elt food-size 1)) 1.5)
 	    (arrange diff_x diff_y 3D_width 3D_length approach (- target_y cur_y)))))
   (when pull_flag
