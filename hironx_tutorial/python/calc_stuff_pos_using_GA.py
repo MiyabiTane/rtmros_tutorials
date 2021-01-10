@@ -251,7 +251,7 @@ def visualize(box_size, box_list, best_stuff, cannot_stuff, name_list, name):
 def calc_place_order(box_size, box_list, name_list, stuff_pos):
 # Decide the boundaries of the column based on the average size of the side dish
     food_height = np.array(box_list)[:, 1]
-    ave_height = np.mean(food_height)
+    ave_height = np.mean(food_height) - 10
     num = int(box_size[1] // ave_height) + 1
     place_row_lst = [[]] * num
     slip_lst = []

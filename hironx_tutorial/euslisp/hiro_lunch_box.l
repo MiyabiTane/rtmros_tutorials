@@ -90,13 +90,13 @@
 (load "recognize_lunchbox.l")
 (recognize_lunchbox_main)
 #|
-(setq *G-z* -43.7091)
-(setq right -85.9902)
-(setq back 523.885)
-(setq *left* -15.5319)
-(setq *front* 408.68)
-(setq *length* 115.205)
-(setq *width* 70.4583)
+(setq *G-z* -52.9617)
+(setq right 67.6995)
+(setq back 468.938)
+(setq *left* 162.751)
+(setq *front* 359.108)
+(setq *length* 109.831)
+(setq *width* 95.0512)
 |#
 (format t "G-z ~A~%" *G-z*)
 (format t "right ~A back ~A~%" right back)
@@ -106,7 +106,7 @@
 ;;get catch-z coords
 (load "check_table_height.l")
 (check_table_height_main)
-;;(setq *catch-z* -0.45)
+;;(setq *catch-z* 0.387794)
 (format t "catch-z ~A~%" *catch-z*)
 
 ;;get food position and size

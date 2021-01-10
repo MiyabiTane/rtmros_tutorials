@@ -10,8 +10,8 @@ import numpy as np
 from copy import deepcopy
 
 TH = 50
-X_OFFSET = -3
-Y_OFFSET = -5
+X_OFFSET = -8
+Y_OFFSET = -13
 EXTENTION = 0
 TH2 = 15
 TH3 = 10
