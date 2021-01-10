@@ -185,7 +185,7 @@
   (send-left-hand 2.0)
   (send *hironxjsk* :larm :move-end-pos offset_vec :world)
   (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 -50) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 -40) :world)
   (send-robot)
   (setq small_move (scale 10 (normalize-vector move_vec)))
   (while (>= (norm move_vec) 10)
@@ -194,7 +194,7 @@
     (setq move_vec (v- move_vec small_move)))
   (send *hironxjsk* :larm :move-end-pos move_vec :world)
   (send-robot)
-  (send *hironxjsk* :larm :move-end-pos #f(0 0 50) :world)
+  (send *hironxjsk* :larm :move-end-pos #f(0 0 40) :world)
   (send-robot)
   )
 
@@ -243,7 +243,8 @@
       (send-robot)
       (rotate-tongs pi)
       (send *hironxjsk* :rarm :move-end-pos #f(0 10 -35))
-      (place-in "tomato" #f(0 0 -10) 170)))
+      (place-in "tomato" #f(0 0 -10) 170)
+      (rotate-tongs (* -1 pi))))
   (send *hironxjsk* :rarm :move-end-pos #f(0 0 60) :world)
   (send-robot)
   )
@@ -329,7 +330,8 @@
 		  (send-robot)
 		  (rotate-tongs pi)
 		  (send *hironxjsk* :rarm :move-end-pos #f(0 10 -35))
-		  (place-in "tomato" #f(0 0 -10) 170)))
+		  (place-in "tomato" #f(0 0 -10) 170)
+		  (rotate-tongs (* -1 pi)))
 	      (send *hironxjsk* :rarm :move-end-pos #f(0 0 60) :world)
 	      (send-robot))
 	  (roll_tomato diff_x diff_y 3D_width 3D_length target_x target_y)))
@@ -522,32 +524,6 @@
     (send-robot)
     (send *hironxjsk* :larm :move-end-pos #f(0 0 75) :world)
     (send-robot))
-  (when (and (not (substringp "left" approach)) (not (substringp "right" approach)))
-    ;;プッシュ
-    (place-init-pose)
-    (send *hironxjsk* :hand-angle-vector :rhand #f(-10.449 10.449 10.449 -10.449))
-    (send-right-hand 2.0)
-    (setq *hiro-pose* (send (send *hironxjsk* :rarm :end-coords) :copy-worldcoords))
-    (setq pos (float-vector target_x target_y 0))
-    (setq pos (v+ pos (v+ #f(10 0 0) *tong-offset*)))
-    (setq pos (v+ pos (float-vector 0 0 (- *catch-z* (elt pos 2)))))
-    (setq *move* (v- pos (send *hiro-pose* :pos)))
-    (send *hiro-pose* :translate *move* :world)
-    (send *hironxjsk* :rarm :inverse-kinematics *hiro-pose*)
-    (send *hironxjsk* :rarm :move-end-pos #f(20 0 55) :world)
-    (send-robot)
-    ;;push
-    (if (> target_y (- (elt lbox_pos 1) 10))
-	(place-in "tomato" #f(0 0 -25) -170)
-      (progn
-	(send *hironxjsk* :larm :move-end-pos #f(0 300 0) :world)
-	(send *hironxjsk* :rarm :move-end-pos #f(-50 0 100) :world)
-	(send-robot)
-	(rotate-tongs pi)
-	(send *hironxjsk* :rarm :move-end-pos #f(0 10 -35))
-	(place-in "tomato" #f(0 0 -10) 170)))
-    (send *hironxjsk* :rarm :move-end-pos #f(0 0 60) :world)
-    (send-robot))
   )
 
 (defun pull_over (pos diff_x diff_y 3D_width 3D_length food-size approach)
@@ -575,9 +551,9 @@
 
   (if (= pull_count 1)
       (if (substringp "overlap" approach)
-	  ;;(progn
-	  (remove_overlap diff_x diff_y 3D_width 3D_length target_x target_y approach)
-	;;(pull_over pos diff_x diff_y 3D_width 3D_length food-size approach))
+	  (progn
+	    (remove_overlap diff_x diff_y 3D_width 3D_length target_x target_y approach)
+	    (pull_over pos diff_x diff_y 3D_width 3D_length food-size approach))
 	(setq pull_flag t))
     ;;２〜４回目でもまだ目標位置に達していなければ幅寄せする
     (if (and (or (> (abs (- target_x cur_x)) 15) (> (abs (- target_y cur_y)) 15)) (< pull_count 5))
@@ -625,7 +601,7 @@
       (send *hironxjsk* :larm :move-end-pos (float-vector 0 (- target_y cur_y) 0) :world)
       (send-robot)
       ;;open chops
-      (send *hironxjsk* :hand-angle-vector :lhand (v+ (send *ri* :hand-angle-vector :lhand) #f(5 -5 -5 5)))
+      (send *hironxjsk* :hand-angle-vector :lhand (v+ (send *ri* :hand-angle-vector :lhand) #f(8 -8 -8 8)))
       (send-left-hand 2.0)
       ;;一旦引く
       (if rot_flag
@@ -640,8 +616,8 @@
       (send *hironxjsk* :larm :move-end-pos #f(0 0 70) :world)
       (send-robot)
       (if rot_flag
-	  (open-chops (+ 3D_length 15))
-	(open-chops (+ 3D_width 15)))
+	  (open-chops (+ 3D_length OPEN_TH))
+	(open-chops (+ 3D_width OPEN_TH)))
       (check-status pos food-size)
       )
     )
