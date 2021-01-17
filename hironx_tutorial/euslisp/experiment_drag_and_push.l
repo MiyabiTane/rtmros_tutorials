@@ -172,7 +172,7 @@
 (pub-lbox-coords)
 (sub-img 2)
 (dotimes (i (length order_list))
-  (when (= i 4)
+  (when (= i 5)
     (format t "SET UP~%")
     (ros::duration-sleep 10))
   (place-init-pose)
