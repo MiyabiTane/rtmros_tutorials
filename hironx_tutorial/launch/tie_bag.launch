@@ -1,0 +1,13 @@
+<launch>
+
+    <arg name="launch_rviz" default="true" />
+
+    <!-- Visualization -->
+    <group if="$(arg launch_rviz)">
+        <node name="rviz"
+            pkg="rviz" type="rviz"
+            args="-d $(find hironx_tutorial)/config/hironxjsk_picking_demo.rviz">
+    	</node>
+    </group>
+    
+</launch>
